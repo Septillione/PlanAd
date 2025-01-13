@@ -12,7 +12,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.compose.rememberNavController
+import com.example.planad.graphs.HomeNavGraph
 import com.example.planad.graphs.RootNavigationGraph
+import com.example.planad.screens.main.ProjectsScreen
 import com.example.planad.ui.theme.PlanAdTheme
 
 class MainActivity : ComponentActivity() {
@@ -27,6 +29,7 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.padding(innerPadding)
                     )
                 }
+                //BottomBarDisplay(navController = rememberNavController())
             }
         }
     }

@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.example.planad.BottomBarDisplay
 import com.example.planad.BottomBarScreen
 import com.example.planad.screens.main.ProjectsScreen
 import com.example.planad.screens.main.SettingsScreen
@@ -25,6 +26,7 @@ fun HomeNavGraph(navController: NavHostController) {
         composable(route = BottomBarScreen.Settings.route) {
             SettingsScreen()
         }
+
     }
 }
 

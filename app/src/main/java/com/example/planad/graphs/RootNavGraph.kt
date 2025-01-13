@@ -5,6 +5,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.example.planad.BottomBarDisplay
 import com.example.planad.screens.main.ProjectsScreen
 
 @Composable
@@ -16,7 +17,7 @@ fun RootNavigationGraph(navController: NavHostController, modifier: Modifier) {
     ) {
         authNavGraph(navController = navController)
         composable(route = Graph.PROJECT) {
-            ProjectsScreen()
+            BottomBarDisplay()
         }
     }
 }

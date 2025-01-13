@@ -1,13 +1,12 @@
 package com.example.planad
 
 import android.annotation.SuppressLint
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationRail
-import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -20,15 +19,24 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.planad.graphs.HomeNavGraph
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.ui.tooling.preview.Preview
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
-fun BottomBarDisplay(navController: NavHostController = rememberNavController()) {
+fun BottomBarDisplay(navController: NavHostController = rememberNavController(), route: String = "BOTTOM_BAR") {
     Scaffold(
         bottomBar = { BottomBar(navController = navController) }
     ) {
         HomeNavGraph(navController = navController)
     }
+}
+
+@Preview
+@Composable
+fun PreviewBottomBarDisplay() {
+    BottomBarDisplay()
 }
 
 @Composable
@@ -43,9 +51,9 @@ fun BottomBar(navController: NavHostController) {
 
     val bottomBarDestination = screens.any { it.route == currentDestination?.route }
     if (bottomBarDestination) {
-        NavigationRail() {
+        NavigationBar {
             screens.forEach { screen ->
-                NavRailItem(
+                NavBarItem(
                     screen = screen,
                     currentDestination = currentDestination,
                     navController = navController
@@ -56,12 +64,12 @@ fun BottomBar(navController: NavHostController) {
 }
 
 @Composable
-fun NavRailItem(
+fun RowScope.NavBarItem(
     screen: BottomBarScreen,
     currentDestination: NavDestination?,
     navController: NavHostController
 ) {
-    NavigationRailItem(
+    NavigationBarItem(
         label = {
             Text(text = screen.title)
         },
@@ -71,7 +79,6 @@ fun NavRailItem(
                 contentDescription = "Navigation Icon"
             )
         },
-        //unselectedContentColor = LocalContentColor.current.copy(alpha = ContentAlpha.disabled),
         selected = currentDestination?.hierarchy?.any {
             it.route == screen.route
         } == true,
@@ -85,7 +92,6 @@ fun NavRailItem(
 }
 
 
-
 sealed class BottomBarScreen(
     val route: String,
     val title: String,
@@ -93,21 +99,20 @@ sealed class BottomBarScreen(
 ) {
     object Projects: BottomBarScreen(
         route = "PROJECTS",
-        title = "PROJECTS",
+        title = "Проекты",
         icon = Icons.Default.Home
     )
     object UserTasks: BottomBarScreen(
         route = "USER_TASKS",
-        title = "USER_TASKS",
+        title = "Мои задачи",
         icon = Icons.Default.Person
     )
     object Settings: BottomBarScreen(
         route = "SETTINGS",
-        title = "SETTINGS",
+        title = "Настройки",
         icon = Icons.Default.Settings
     )
 }
-
 
 
 

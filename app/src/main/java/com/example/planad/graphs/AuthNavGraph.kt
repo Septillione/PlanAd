@@ -17,11 +17,9 @@ fun NavGraphBuilder.authNavGraph(navController: NavHostController) {
         composable(route = AuthScreen.StartAuth.route) {
             StartAuthScreen(
                 onLoginClick = {
-                    navController.popBackStack()
                     navController.navigate(AuthScreen.Login.route)
                 },
                 onSignUpClick = {
-                    navController.popBackStack()
                     navController.navigate(AuthScreen.SignUp.route)
                 }
             )
@@ -33,7 +31,6 @@ fun NavGraphBuilder.authNavGraph(navController: NavHostController) {
                     navController.navigate(Graph.PROJECT)
                 },
                 onForgotClick = {
-                    navController.popBackStack()
                     navController.navigate(AuthScreen.Forgot.route)
                 }
             )
@@ -49,7 +46,6 @@ fun NavGraphBuilder.authNavGraph(navController: NavHostController) {
         composable(route = AuthScreen.Forgot.route) {
             ForgotScreen(
                 onClick = {
-                    navController.popBackStack()
                     navController.navigate(AuthScreen.Login.route)
                 }
             )
