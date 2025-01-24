@@ -47,7 +47,7 @@ fun ProjectsScreen() {
             ),
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .padding(horizontal = 16.dp, vertical = 125.dp)
+                .padding(horizontal = 16.dp, vertical = 150.dp)
         ) {
             Text(
                 text = "Добавить проект",

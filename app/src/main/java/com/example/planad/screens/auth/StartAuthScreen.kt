@@ -1,5 +1,6 @@
 package com.example.planad.screens.auth
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -12,6 +13,8 @@ import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.colorResource
@@ -24,8 +27,19 @@ import com.example.planad.R
 @Composable
 fun StartAuthScreen(
     onLoginClick: () -> Unit,
-    onSignUpClick: () -> Unit
+    onSignUpClick: () -> Unit,
+    onInCase: () -> Unit,
+    authViewModel: AuthViewModel
 ) {
+    val authState = authViewModel.authState.observeAsState()
+
+    LaunchedEffect(authState.value) {
+        when(authState.value) {
+            is AuthState.Authenticated -> onInCase()
+            else -> Unit
+        }
+    }
+
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier.fillMaxSize()
@@ -71,7 +85,7 @@ fun StartAuthScreen(
 @Preview
 @Composable
 fun PreviewStartAuth() {
-    StartAuthScreen(onLoginClick = {}, onSignUpClick = {})
+    //StartAuthScreen(onLoginClick = {}, onSignUpClick = {})
 }
 
 

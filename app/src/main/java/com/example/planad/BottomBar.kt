@@ -22,21 +22,22 @@ import com.example.planad.graphs.HomeNavGraph
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.ui.tooling.preview.Preview
+import com.example.planad.screens.auth.AuthViewModel
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
-fun BottomBarDisplay(navController: NavHostController = rememberNavController(), route: String = "BOTTOM_BAR") {
+fun BottomBarDisplay(navController: NavHostController = rememberNavController(), route: String = "BOTTOM_BAR", authViewModel: AuthViewModel) {
     Scaffold(
         bottomBar = { BottomBar(navController = navController) }
     ) {
-        HomeNavGraph(navController = navController)
+        HomeNavGraph(navController = navController, authViewModel = authViewModel)
     }
 }
 
 @Preview
 @Composable
 fun PreviewBottomBarDisplay() {
-    BottomBarDisplay()
+    //BottomBarDisplay()
 }
 
 @Composable

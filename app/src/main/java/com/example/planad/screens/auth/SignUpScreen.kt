@@ -1,5 +1,6 @@
 package com.example.planad.screens.auth
 
+import android.util.Log
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -25,13 +26,18 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.wear.compose.material3.TextButton
 import com.example.planad.R
+import com.google.firebase.Firebase
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.auth
 
 @Composable
 fun SignUpScreen(
-    onClick: () -> Unit
+    onSignUp: () -> Unit,
+    authViewModel: AuthViewModel
 ) {
+    val auth = Firebase.auth
+
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
@@ -62,7 +68,7 @@ fun SignUpScreen(
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
-                label = { Text("Password") },
+                label = { Text("Пароль") },
                 modifier = Modifier.width(300.dp),
                 visualTransformation = PasswordVisualTransformation()
             )
@@ -70,7 +76,9 @@ fun SignUpScreen(
             Spacer(modifier = Modifier.height(100.dp))
 
             Button(
-                onClick,
+                onClick = {
+                    signUp(auth, email, password, onSignUp)
+                },
                 shape = RoundedCornerShape(10.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = colorResource(id = R.color.darkBlue),
@@ -88,10 +96,22 @@ fun SignUpScreen(
     }
 }
 
+private fun signUp(auth: FirebaseAuth, email: String, password: String, onSignUp: () -> Unit) {
+    auth.createUserWithEmailAndPassword(email, password)
+        .addOnCompleteListener {
+            if (it.isSuccessful) {
+                Log.d("MyLog", "Успешная регистрация")
+                onSignUp()
+            } else {
+                Log.d("MyLog", "Регистрация накрылась")
+            }
+        }
+}
+
 @Preview
 @Composable
 fun PreviewSignUp() {
-    SignUpScreen(onClick = {})
+    SignUpScreen(onSignUp = {}, authViewModel = AuthViewModel())
 }
 
 
