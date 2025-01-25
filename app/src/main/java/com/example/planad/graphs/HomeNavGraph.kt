@@ -31,7 +31,7 @@ fun HomeNavGraph(navController: NavHostController, authViewModel: AuthViewModel)
         composable(route = BottomBarScreen.Settings.route) {
             SettingsScreen(
                 onSignOut = {
-                    navController.navigate(Graph.ROOT)/* {
+                    navController.navigate(Graph.AUTHENTICATION)/* {
                         popUpTo(Graph.PROJECT) { inclusive = true }
                     }*/
                 },

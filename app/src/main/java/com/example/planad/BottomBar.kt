@@ -26,7 +26,11 @@ import com.example.planad.screens.auth.AuthViewModel
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
-fun BottomBarDisplay(navController: NavHostController = rememberNavController(), route: String = "BOTTOM_BAR", authViewModel: AuthViewModel) {
+fun BottomBarDisplay(
+    navController: NavHostController = rememberNavController(),
+    route: String = "BOTTOM_BAR",
+    authViewModel: AuthViewModel
+) {
     Scaffold(
         bottomBar = { BottomBar(navController = navController) }
     ) {
