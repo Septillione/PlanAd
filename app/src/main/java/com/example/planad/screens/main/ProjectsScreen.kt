@@ -2,6 +2,7 @@ package com.example.planad.screens.main
 
 import android.annotation.SuppressLint
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -51,7 +52,9 @@ import com.google.firebase.firestore.FirebaseFirestore
 
 
 @Composable
-fun ProjectsScreen() {
+fun ProjectsScreen(
+    onProjectTap: (String) -> Unit
+) {
     var projects by remember { mutableStateOf<List<Project>>(emptyList()) }
     var showBottomSheet by remember { mutableStateOf(false) }
     var projectName by remember { mutableStateOf("") }
@@ -96,6 +99,7 @@ fun ProjectsScreen() {
                             .padding(8.dp)
                             .border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
                             .padding(16.dp)
+                            .clickable { onProjectTap(project.id) }
                     ) {
                         Text(
                             text = project.name,
@@ -238,6 +242,32 @@ fun getProjects(
         }
 }
 
+fun getProjectById(
+    projectId: String,
+    onSuccess: (Project) -> Unit,
+    onFailure: (Exception) -> Unit
+) {
+    val db = FirebaseFirestore.getInstance()
+
+    db.collection("projects").document(projectId)
+        .get()
+        .addOnSuccessListener { document ->
+            if (document != null) {
+                val project = document.toObject(Project::class.java)?.copy(id = document.id)
+                if (project != null) {
+                    onSuccess(project)
+                } else {
+                    onFailure(Exception("Project not found"))
+                }
+            } else {
+                onFailure(Exception("Document does not exist"))
+            }
+        }
+        .addOnFailureListener { e ->
+            onFailure(e)
+        }
+}
+
 data class Project(
     val id: String = "",
     val name: String = ""
@@ -246,7 +276,7 @@ data class Project(
 @Preview()
 @Composable
 fun PreviewProjects() {
-    ProjectsScreen()
+    //ProjectsScreen()
 }
 
 

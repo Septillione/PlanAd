@@ -38,6 +38,7 @@ fun RootNavigationGraph(navController: NavHostController, modifier: Modifier, au
         startDestination = startDestination
     ) {
         authNavGraph(navController = navController, authViewModel = authViewModel)
+        tasksNavGraph(navController = navController, authViewModel = authViewModel)
         composable(route = Graph.PROJECT) {
             BottomBarDisplay(authViewModel = authViewModel)
         }
