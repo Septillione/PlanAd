@@ -17,7 +17,6 @@ import androidx.navigation.navigation
 import com.example.planad.screens.auth.AuthViewModel
 import com.example.planad.screens.main.Project
 import com.example.planad.screens.main.TasksScreen
-import com.example.planad.screens.main.getProjectById
 
 
 fun NavGraphBuilder.tasksNavGraph(navController: NavHostController, authViewModel: AuthViewModel) {

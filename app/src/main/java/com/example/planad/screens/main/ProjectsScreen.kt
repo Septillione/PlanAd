@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,14 +20,20 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.materialIcon
 import androidx.compose.material.icons.outlined.AddCircle
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalBottomSheetDefaults
 import androidx.compose.material3.OutlinedTextField
@@ -41,6 +48,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.ExperimentalUnitApi
@@ -87,7 +95,10 @@ fun ProjectsScreen(
         if (loading) {
             CircularProgressIndicator()
         } else if (errorMessage.isNotEmpty()) {
-            Text(text = errorMessage, color = Color.Red)
+            Text(
+                text = errorMessage,
+                color = Color.Red
+            )
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(top = 160.dp, bottom = 230.dp)
@@ -101,12 +112,20 @@ fun ProjectsScreen(
                             .padding(16.dp)
                             .clickable { onProjectTap(project.id) }
                     ) {
-                        Text(
-                            text = project.name,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(8.dp)
-                        )
+                        Row(
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.outline_folder_24),
+                                contentDescription = "Проект:",
+                                modifier = Modifier.size(36.dp)
+                            )
+                            Text(
+                                text = project.name,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(8.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -138,7 +157,7 @@ fun ProjectsScreen(
         }
 
         if (showBottomSheet) {
-            BottomSheet(
+            BottomSheetProject(
                 onDismissRequest = {showBottomSheet = false},
                 onProjectAdded = { name ->
                     val newProject = Project(name = name)
@@ -164,7 +183,7 @@ fun ProjectsScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BottomSheet(
+fun BottomSheetProject(
     onDismissRequest: () -> Unit,
     onProjectAdded: (String) -> Unit,
     projectName: String,
@@ -242,41 +261,9 @@ fun getProjects(
         }
 }
 
-fun getProjectById(
-    projectId: String,
-    onSuccess: (Project) -> Unit,
-    onFailure: (Exception) -> Unit
-) {
-    val db = FirebaseFirestore.getInstance()
-
-    db.collection("projects").document(projectId)
-        .get()
-        .addOnSuccessListener { document ->
-            if (document != null) {
-                val project = document.toObject(Project::class.java)?.copy(id = document.id)
-                if (project != null) {
-                    onSuccess(project)
-                } else {
-                    onFailure(Exception("Project not found"))
-                }
-            } else {
-                onFailure(Exception("Document does not exist"))
-            }
-        }
-        .addOnFailureListener { e ->
-            onFailure(e)
-        }
-}
-
 data class Project(
     val id: String = "",
     val name: String = ""
 )
-
-@Preview()
-@Composable
-fun PreviewProjects() {
-    //ProjectsScreen()
-}
 
 
