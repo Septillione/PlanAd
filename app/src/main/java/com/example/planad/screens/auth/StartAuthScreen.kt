@@ -85,7 +85,11 @@ fun StartAuthScreen(
 @Preview
 @Composable
 fun PreviewStartAuth() {
-    //StartAuthScreen(onLoginClick = {}, onSignUpClick = {})
+    StartAuthScreen(
+        onLoginClick = {},
+        onSignUpClick = {},
+        onInCase = {},
+        authViewModel = AuthViewModel())
 }
 
 

@@ -34,7 +34,7 @@ import com.google.firebase.auth.auth
 @Composable
 fun SignUpScreen(
     onSignUp: () -> Unit,
-    authViewModel: AuthViewModel
+    authViewModel: AuthViewModel,
 ) {
     val auth = Firebase.auth
 

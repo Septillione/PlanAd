@@ -4,9 +4,11 @@ import android.app.ActivityManager.TaskDescription
 import android.icu.number.NumberFormatter.UnitWidth
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -45,6 +47,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.AddCircle
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -63,6 +67,7 @@ import androidx.wear.compose.foundation.pager.rememberPagerState
 import androidx.wear.compose.material3.HorizontalPageIndicator
 import com.example.planad.R
 import com.google.accompanist.pager.HorizontalPagerIndicator
+import com.google.firebase.auth.FirebaseAuth
 import java.util.UUID
 
 
@@ -74,6 +79,7 @@ fun TasksScreen(
     projectId: String
 ) {
     var tasks = remember { mutableStateOf<List<Task>>(emptyList()) }
+    var projects by remember { mutableStateOf<List<Project>>(emptyList()) }
     var projectName by remember { mutableStateOf("Задачи проекта") }
     var showBottomSheet by remember { mutableStateOf(false) }
     var taskName by remember { mutableStateOf("") }
@@ -81,6 +87,24 @@ fun TasksScreen(
     var loading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf("") }
     var dropdownMenu by remember { mutableStateOf(false) }
+    var userRole by remember { mutableStateOf("Сотрудник") }
+
+    LaunchedEffect(Unit) {
+        val userId = FirebaseAuth.getInstance().currentUser?.uid
+        if (userId != null) {
+            getUserRole(
+                userId = userId,
+                onSuccess = { role ->
+                    userRole = role
+                },
+                onFailure = { e ->
+                    errorMessage = "Ошибка: ${e.message}"
+                }
+            )
+        } else {
+            errorMessage = "Пользователь не авторизован"
+        }
+    }
 
     // Получаем название проекта
     LaunchedEffect(projectId) {
@@ -113,31 +137,53 @@ fun TasksScreen(
             title = {
                 Text(
                     text = projectName,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
                     overflow = TextOverflow.Ellipsis
                 ) }, // Используем название проекта
             navigationIcon = {
                 IconButton(onClick = onBackTap) {
-                    Icon(Icons.Default.Home, contentDescription = "Назад")
+                    Icon(Icons.Outlined.Home, contentDescription = "Назад", modifier = Modifier.size(30.dp))
                 }
             },
             actions = {
-                IconButton(
-                    onClick = { dropdownMenu = !dropdownMenu }
-                ) {
-                    Icon(Icons.Default.MoreVert, contentDescription = "Опции")
-                }
-                DropdownMenu(
-                    expanded = dropdownMenu,
-                    onDismissRequest = { dropdownMenu = false }
-                ) {
-                    DropdownMenuItem(
-                        text = { Text("Редактировать проект") },
-                        onClick = { }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Удалить проект") },
-                        onClick = { }
-                    )
+                if (userRole == "Руководитель") {
+                    IconButton(
+                        onClick = { dropdownMenu = !dropdownMenu }
+                    ) {
+                        Icon(Icons.Outlined.MoreVert, contentDescription = "Опции", modifier = Modifier.size(30.dp))
+                    }
+                    DropdownMenu(
+                        expanded = dropdownMenu,
+                        onDismissRequest = { dropdownMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Редактировать проект") },
+                            onClick = { }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Удалить проект") },
+                            onClick = {
+                                deleteProject(
+                                    projectId = projectId,
+                                    onSuccess = {
+                                        getProjects(
+                                            onSuccess = { updatedProjects ->
+                                                projects = updatedProjects
+                                            },
+                                            onFailure = { e ->
+                                                errorMessage = "Ошибка при получении обновленных проектов: ${e.message}"
+                                            }
+                                        )
+                                        onBackTap()
+                                    },
+                                    onFailure = { e ->
+                                        errorMessage = "Ошибка при удалении проекта: ${e.message}"
+                                    }
+                                    )
+                            }
+                        )
+                    }
                 }
             }
         )
@@ -147,57 +193,104 @@ fun TasksScreen(
         } else if (errorMessage.isNotEmpty()) {
             Text(text = errorMessage, color = Color.Red)
         } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(top = 120.dp, bottom = 180.dp)
-            ) {
-                items(tasks.value) { task ->
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp)
-                            .border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
-                            .padding(16.dp)
-                    ) {
-                        Text(
-                            text = task.title,
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = task.description,
-                            fontSize = 16.sp,
-                            modifier = Modifier.padding(top = 4.dp)
-                        )
+            if (userRole == "Руководитель") {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(top = 120.dp, bottom = 180.dp)
+                ) {
+                    items(tasks.value) { task ->
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(8.dp)
+                                .border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
+                                .padding(16.dp)
+                        ) {
+                            Row(
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = task.title,
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+
+                                IconButton(
+                                    onClick = {
+
+                                    },
+                                    modifier = Modifier.size(30.dp)
+                                ) {
+                                    Icon(Icons.Outlined.MoreVert, contentDescription = "Опции", modifier = Modifier.size(30.dp))
+                                }
+                            }
+
+                            Text(
+                                text = task.description,
+                                fontSize = 16.sp,
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
+                        }
+                    }
+                }
+
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(top = 120.dp, bottom = 120.dp)
+                ) {
+                    items(tasks.value) { task ->
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(8.dp)
+                                .border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
+                                .padding(16.dp)
+                        ) {
+                            Text(
+                                text = task.title,
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = task.description,
+                                fontSize = 16.sp,
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
+                        }
                     }
                 }
             }
         }
 
-        FilledTonalButton(
-            onClick = { showBottomSheet = true },
-            contentPadding = PaddingValues(horizontal = 15.dp, vertical = 12.dp),
-            shape = RoundedCornerShape(20.dp),
-            colors = ButtonDefaults.filledTonalButtonColors(
-                containerColor = colorResource(id = R.color.lightBlue).copy(alpha = 0.3f),
-                contentColor = colorResource(id = R.color.blue)
-            ),
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(horizontal = 16.dp, vertical = 90.dp)
-        ) {
-            Text(
-                text = "Добавить задачу",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Icon(
-                imageVector = Icons.Outlined.AddCircle,
-                contentDescription = "Add Icon",
-                modifier = Modifier.size(36.dp)
-            )
+        if (userRole == "Руководитель") {
+            FilledTonalButton(
+                onClick = { showBottomSheet = true },
+                contentPadding = PaddingValues(horizontal = 15.dp, vertical = 12.dp),
+                shape = RoundedCornerShape(20.dp),
+                colors = ButtonDefaults.filledTonalButtonColors(
+                    containerColor = colorResource(id = R.color.lightBlue).copy(alpha = 0.3f),
+                    contentColor = colorResource(id = R.color.blue)
+                ),
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(horizontal = 16.dp, vertical = 90.dp)
+            ) {
+                Text(
+                    text = "Добавить задачу",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Icon(
+                    imageVector = Icons.Outlined.AddCircle,
+                    contentDescription = "Add Icon",
+                    modifier = Modifier.size(36.dp)
+                )
+            }
         }
 
         if (showBottomSheet) {
@@ -274,30 +367,51 @@ fun BottomSheetTask(
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold
             )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             OutlinedTextField(
                 value = taskName,
                 onValueChange = onTaskNameChange,
                 label = {Text("Название задачи")},
                 modifier = Modifier.fillMaxWidth()
             )
-            Spacer(modifier = Modifier.height(16.dp))
+
+            Spacer(modifier = Modifier.height(8.dp))
+
             OutlinedTextField(
                 value = taskDescription,
                 onValueChange = onTaskDescription,
                 label = {Text("Описание задачи")},
                 modifier = Modifier.fillMaxWidth()
             )
-            Spacer(modifier = Modifier.height(16.dp))
+
+            Spacer(modifier = Modifier.height(20.dp))
+
             Button(
                 onClick = {
                     if (taskName.isNotEmpty()) {
                         onTaskAdded(taskName, taskDescription)
                     }
                 },
-                modifier = Modifier.fillMaxWidth()
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = colorResource(id = R.color.darkBlue),
+                    contentColor = colorResource(id = R.color.white)
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .size(250.dp, 50.dp)
+                    .align(Alignment.CenterHorizontally)
             ) {
-                Text("Создать задачу")
+                Text(
+                    text = "Создать задачу",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
+
+            Spacer(modifier = Modifier.height(40.dp))
         }
     }
 }
@@ -312,6 +426,23 @@ fun addTask(
 
     db.collection("projects").document(projectId).collection("tasks")
         .add(task)
+        .addOnSuccessListener {
+            onSuccess()
+        }
+        .addOnFailureListener { e ->
+            onFailure(e)
+        }
+}
+
+fun deleteTask(
+    taskId: String,
+    onSuccess: () -> Unit,
+    onFailure: (Exception) -> Unit
+) {
+    val db = FirebaseFirestore.getInstance()
+
+    db.collection("tasks").document(taskId)
+        .delete()
         .addOnSuccessListener {
             onSuccess()
         }

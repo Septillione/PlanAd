@@ -11,6 +11,7 @@ import com.example.planad.screens.auth.ForgotScreen
 import com.example.planad.screens.auth.LoginScreen
 import com.example.planad.screens.auth.SignUpScreen
 import com.example.planad.screens.auth.StartAuthScreen
+import com.example.planad.screens.auth.UserProfileSetupScreen
 import com.example.planad.screens.main.SettingsScreen
 
 fun NavGraphBuilder.authNavGraph(navController: NavHostController, authViewModel: AuthViewModel) {
@@ -48,9 +49,16 @@ fun NavGraphBuilder.authNavGraph(navController: NavHostController, authViewModel
             SignUpScreen(
                 onSignUp = {
                     navController.popBackStack()
-                    navController.navigate(AuthScreen.Login.route)
+                    navController.navigate(AuthScreen.UserProfileSetup.route)
                 },
                 authViewModel = authViewModel
+            )
+        }
+        composable(route = AuthScreen.UserProfileSetup.route) {
+            UserProfileSetupScreen(
+                onProfileComplete = {
+                    navController.navigate(Graph.PROJECT)
+                }
             )
         }
         composable(route = AuthScreen.Forgot.route) {
@@ -67,6 +75,7 @@ sealed class AuthScreen(val route: String) {
     object StartAuth: AuthScreen(route = "START_AUTH")
     object Login: AuthScreen(route = "LOGIN")
     object SignUp: AuthScreen(route = "SIGN_UP")
+    object UserProfileSetup: AuthScreen(route = "USER_PROFILE_SETUP")
     object Forgot: AuthScreen(route = "FORGOT")
 }
 
