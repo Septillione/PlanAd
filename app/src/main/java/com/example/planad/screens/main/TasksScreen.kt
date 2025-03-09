@@ -1,9 +1,6 @@
 package com.example.planad.screens.main
 
-import android.app.ActivityManager.TaskDescription
-import android.icu.number.NumberFormatter.UnitWidth
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,58 +14,47 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.outlined.AddCircle
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.toObject
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.outlined.AddCircle
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.TextField
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.res.colorResource
-import androidx.compose.ui.semantics.Role.Companion.Button
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.wear.compose.foundation.pager.rememberPagerState
-import androidx.wear.compose.material3.HorizontalPageIndicator
+import androidx.compose.ui.window.Dialog
 import com.example.planad.R
-import com.google.accompanist.pager.HorizontalPagerIndicator
 import com.google.firebase.auth.FirebaseAuth
-import java.util.UUID
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.auth.User
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -88,6 +74,13 @@ fun TasksScreen(
     var errorMessage by remember { mutableStateOf("") }
     var dropdownMenu by remember { mutableStateOf(false) }
     var userRole by remember { mutableStateOf("Сотрудник") }
+    var expandedTaskId by remember { mutableStateOf<String?>(null) }
+
+    var showEditProjectDialog by remember { mutableStateOf(false) }
+    var showDeleteProjectDialog by remember { mutableStateOf(false) }
+
+    var showEditTaskDialog by remember { mutableStateOf(false) }
+    var selectedTaskForEdit by remember { mutableStateOf<Task?>(null) }
 
     LaunchedEffect(Unit) {
         val userId = FirebaseAuth.getInstance().currentUser?.uid
@@ -108,6 +101,8 @@ fun TasksScreen(
 
     // Получаем название проекта
     LaunchedEffect(projectId) {
+        loading = true
+        errorMessage = ""
         getProjectName(
             projectId = projectId,
             onSuccess = { name ->
@@ -159,34 +154,50 @@ fun TasksScreen(
                     ) {
                         DropdownMenuItem(
                             text = { Text("Редактировать проект") },
-                            onClick = { }
+                            onClick = {
+                                showEditProjectDialog = true
+                                dropdownMenu = false
+                            }
                         )
                         DropdownMenuItem(
                             text = { Text("Удалить проект") },
                             onClick = {
-                                deleteProject(
-                                    projectId = projectId,
-                                    onSuccess = {
-                                        getProjects(
-                                            onSuccess = { updatedProjects ->
-                                                projects = updatedProjects
-                                            },
-                                            onFailure = { e ->
-                                                errorMessage = "Ошибка при получении обновленных проектов: ${e.message}"
-                                            }
-                                        )
-                                        onBackTap()
-                                    },
-                                    onFailure = { e ->
-                                        errorMessage = "Ошибка при удалении проекта: ${e.message}"
-                                    }
-                                    )
+                                showDeleteProjectDialog = true
+                                dropdownMenu = false
                             }
                         )
                     }
                 }
             }
         )
+
+        if (showEditProjectDialog) {
+            EditProjectDialog(
+                currentProjectName = projectName,
+                onDismissRequest = { showEditProjectDialog = false },
+                onSave = { newName ->
+                    updateProjectName(
+                        projectId = projectId,
+                        newName = newName,
+                        onSuccess = {
+                            projectName = newName
+                            showEditProjectDialog = false
+                        },
+                        onFailure = { e ->
+                            errorMessage = "Ошибка: ${e.message}"
+                        }
+                    )
+                }
+            )
+        }
+
+        if (showDeleteProjectDialog) {
+            DeleteProjectDialog(
+                projectId = projectId,
+                onDismissRequest = { showDeleteProjectDialog = false },
+                onBackTap = onBackTap
+            )
+        }
 
         if (loading) {
             CircularProgressIndicator()
@@ -200,38 +211,73 @@ fun TasksScreen(
                         .padding(top = 120.dp, bottom = 180.dp)
                 ) {
                     items(tasks.value) { task ->
-                        Column(
+                        Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(8.dp)
                                 .border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
-                                .padding(16.dp)
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                modifier = Modifier.fillMaxWidth()
+                            Column(
+                                modifier = Modifier.weight(1f)
                             ) {
                                 Text(
                                     text = task.title,
                                     fontSize = 20.sp,
                                     fontWeight = FontWeight.Bold
                                 )
-
+                                Text(
+                                    text = task.description,
+                                    fontSize = 16.sp,
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
+                            }
+                            Box {
                                 IconButton(
                                     onClick = {
-
-                                    },
-                                    modifier = Modifier.size(30.dp)
+                                        selectedTaskForEdit = task
+                                    }
                                 ) {
-                                    Icon(Icons.Outlined.MoreVert, contentDescription = "Опции", modifier = Modifier.size(30.dp))
+                                    Icon(Icons.Outlined.MoreVert, contentDescription = "Опции")
+                                }
+                                DropdownMenu(
+                                    expanded = selectedTaskForEdit?.id == task.id,
+                                    onDismissRequest = {
+                                        selectedTaskForEdit = null
+                                        expandedTaskId = null
+                                    }
+                                ) {
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text("Редактировать")
+                                        },
+                                        onClick = {
+                                            showEditTaskDialog = true
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text("Удалить")
+                                        },
+                                        onClick = {
+                                            deleteTask(
+                                                projectId = projectId,
+                                                taskId = task.id,
+                                                onSuccess = {
+                                                    tasks.value = tasks.value.filter { it.id != task.id }
+                                                    selectedTaskForEdit = null
+                                                    expandedTaskId = null
+                                                },
+                                                onFailure = { e ->
+                                                    errorMessage = "Ошибка: ${e.message}"
+                                                }
+                                            )
+                                            expandedTaskId = null
+                                        }
+                                    )
                                 }
                             }
-
-                            Text(
-                                text = task.description,
-                                fontSize = 16.sp,
-                                modifier = Modifier.padding(top = 4.dp)
-                            )
                         }
                     }
                 }
@@ -264,6 +310,38 @@ fun TasksScreen(
                     }
                 }
             }
+        }
+
+        if (showEditTaskDialog && selectedTaskForEdit != null) {
+            EditTaskDialog(
+                currentTask = selectedTaskForEdit!!,
+                onDismissRequest = {
+                    showEditTaskDialog = false
+                    selectedTaskForEdit = null
+                },
+                onSave = { newTitle, newDescription ->
+                    updateTask(
+                        projectId = projectId,
+                        taskId = selectedTaskForEdit!!.id,
+                        title = newTitle,
+                        description = newDescription,
+                        onSuccess = {
+                            tasks.value = tasks.value.map { task ->
+                                if (task.id == selectedTaskForEdit!!.id) {
+                                    task.copy(title = newTitle, description = newDescription)
+                                } else {
+                                    task
+                                }
+                            }
+                            showEditTaskDialog = false
+                            selectedTaskForEdit = null
+                        },
+                        onFailure = { e ->
+                            errorMessage = "Ошибка: ${e.message}"
+                        }
+                    )
+                }
+            )
         }
 
         if (userRole == "Руководитель") {
@@ -301,14 +379,18 @@ fun TasksScreen(
                     addTask(
                         projectId = projectId,
                         task = newTask,
-                        onSuccess = {
-                            tasks.value += newTask
+                        onSuccess = { taskId ->
+                            val taskWithId = newTask.copy(id = taskId)
+                            tasks.value += taskWithId
                             showBottomSheet = false
                             taskName = ""
                             taskDescription = ""
                         },
                         onFailure = { e ->
                             errorMessage = "Ошибка: ${e.message}"
+                            taskName = ""
+                            taskDescription = ""
+                            showBottomSheet = false
                         }
                     )
                 },
@@ -320,6 +402,12 @@ fun TasksScreen(
         }
     }
 }
+
+
+
+
+
+
 
 
 fun getProjectName(
@@ -338,6 +426,24 @@ fun getProjectName(
             } else {
                 onFailure(Exception("Проект не найден"))
             }
+        }
+        .addOnFailureListener { e ->
+            onFailure(e)
+        }
+}
+
+fun updateProjectName(
+    projectId: String,
+    newName: String,
+    onSuccess: () -> Unit,
+    onFailure: (Exception) -> Unit
+) {
+    val db = FirebaseFirestore.getInstance()
+
+    db.collection("projects").document(projectId)
+        .update("name", newName)
+        .addOnSuccessListener {
+            onSuccess()
         }
         .addOnFailureListener { e ->
             onFailure(e)
@@ -419,13 +525,32 @@ fun BottomSheetTask(
 fun addTask(
     projectId: String,
     task: Task,
-    onSuccess: () -> Unit,
+    onSuccess: (String) -> Unit,
     onFailure: (Exception) -> Unit
 ) {
     val db = FirebaseFirestore.getInstance()
 
     db.collection("projects").document(projectId).collection("tasks")
         .add(task)
+        .addOnSuccessListener { documentReference ->
+            val taskId = documentReference.id
+            onSuccess(taskId)
+        }
+        .addOnFailureListener { e ->
+            onFailure(e)
+        }
+}
+
+fun deleteTask(
+    projectId: String,
+    taskId: String,
+    onSuccess: () -> Unit,
+    onFailure: (Exception) -> Unit
+) {
+    val db = FirebaseFirestore.getInstance()
+
+    db.collection("projects").document(projectId).collection("tasks").document(taskId)
+        .delete()
         .addOnSuccessListener {
             onSuccess()
         }
@@ -434,15 +559,23 @@ fun addTask(
         }
 }
 
-fun deleteTask(
+fun updateTask(
+    projectId: String,
     taskId: String,
+    title: String,
+    description: String,
     onSuccess: () -> Unit,
     onFailure: (Exception) -> Unit
 ) {
     val db = FirebaseFirestore.getInstance()
 
-    db.collection("tasks").document(taskId)
-        .delete()
+    db.collection("projects").document(projectId).collection("tasks").document(taskId)
+        .update(
+            mapOf(
+                "title" to title,
+                "description" to description
+            )
+        )
         .addOnSuccessListener {
             onSuccess()
         }
@@ -463,7 +596,7 @@ fun getTasksForProject(
         .addOnSuccessListener { result ->
             val tasks = mutableListOf<Task>()
             for (document in result) {
-                val task = document.toObject(Task::class.java)
+                val task = document.toObject(Task::class.java).copy(id = document.id)
                 tasks.add(task)
                 }
             onSuccess(tasks)
@@ -473,8 +606,215 @@ fun getTasksForProject(
         }
 }
 
+@Composable
+fun EditTaskDialog(
+    currentTask: Task,
+    onDismissRequest: () -> Unit,
+    onSave: (String, String) -> Unit
+) {
+    var newTaskName by remember { mutableStateOf(currentTask.title) }
+    var newTaskDescription by remember { mutableStateOf(currentTask.description) }
+
+    Dialog(
+        onDismissRequest = onDismissRequest
+    ) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surface
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .width(280.dp)
+            ) {
+                Text(
+                    text = "Редактировать задачу",
+                    modifier = Modifier.padding(16.dp)
+                )
+
+                OutlinedTextField(
+                    value = newTaskName,
+                    onValueChange = { newTaskName = it },
+                    label = { Text(text = "Название задачи") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp)
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = newTaskDescription,
+                    onValueChange = { newTaskDescription = it },
+                    label = { Text("Описание задачи") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp)
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(
+                        onClick = onDismissRequest
+                    ) {
+                        Text("Отмена")
+                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    TextButton(
+                        onClick = { onSave(newTaskName, newTaskDescription) },
+                        enabled = newTaskName.isNotEmpty()
+                    ) {
+                        Text("Сохранить")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun EditProjectDialog(
+    currentProjectName: String,
+    onDismissRequest: () -> Unit,
+    onSave: (String) -> Unit
+) {
+    var newProjectName by remember { mutableStateOf(currentProjectName) }
+
+    Dialog(
+        onDismissRequest = onDismissRequest
+    ) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surface
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .width(280.dp)
+            ) {
+                Text(
+                    text = "Редактировать название проекта",
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+
+                OutlinedTextField(
+                    value = newProjectName,
+                    onValueChange = { newProjectName = it },
+                    label = { Text("Новое название проекта") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp)
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(
+                        onClick = onDismissRequest
+                    ) {
+                        Text(
+                            text = "Отмена"
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        TextButton(
+                            onClick = { onSave(newProjectName) },
+                            enabled = newProjectName.isNotEmpty()
+                        ) {
+                            Text(
+                                text = "Сохранить"
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DeleteProjectDialog(
+    onBackTap: () -> Unit,
+    projectId: String,
+    onDismissRequest: () -> Unit,
+) {
+    var projects by remember { mutableStateOf<List<Project>>(emptyList()) }
+    var errorMessage by remember { mutableStateOf("") }
+
+    Dialog(
+        onDismissRequest = onDismissRequest
+    ) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surface
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .width(280.dp)
+            ) {
+                Text(
+                    text = "Вы уверены, что хотите удалить проект?",
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(
+                        onClick = onDismissRequest
+                    ) {
+                        Text(
+                            text = "Отмена"
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        TextButton(
+                            onClick = {
+                                deleteProject(
+                                    projectId = projectId,
+                                    onSuccess = {
+                                        getProjects(
+                                            onSuccess = { updatedProjects ->
+                                                projects = updatedProjects
+                                            },
+                                            onFailure = { e ->
+                                                errorMessage = "Ошибка при получении обновленных проектов: ${e.message}"
+                                            }
+                                        )
+                                        onBackTap()
+                                    },
+                                    onFailure = { e ->
+                                        errorMessage = "Ошибка при удалении проекта: ${e.message}"
+                                    }
+                                )
+                            }
+                        ) {
+                            Text(
+                                text = "Удалить"
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 data class Task(
     var id: String = "",
     val title: String = "",
-    val description: String = ""
+    val description: String = "",
+    var assignedUserId: String? = null
 )

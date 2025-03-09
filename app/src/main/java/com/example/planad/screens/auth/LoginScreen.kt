@@ -81,7 +81,7 @@ fun LoginScreen(
                 modifier = Modifier.width(300.dp)
             )
 
-            Spacer(modifier = Modifier.height(30.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             OutlinedTextField(
                 value = password,
@@ -91,7 +91,7 @@ fun LoginScreen(
                 visualTransformation = PasswordVisualTransformation()
             )
 
-            Spacer(modifier = Modifier.height(100.dp))
+            Spacer(modifier = Modifier.height(50.dp))
 
             Button(
                 onClick = {
@@ -110,15 +110,6 @@ fun LoginScreen(
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold
                 )
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            TextButton(
-                onForgotClick,
-                modifier = Modifier.size(width = 150.dp, height = 25.dp).align(Alignment.Start).padding(start = 15.dp)
-            ) {
-                Text("Забыл пароль")
             }
         }
     }

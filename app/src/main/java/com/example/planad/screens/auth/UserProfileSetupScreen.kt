@@ -185,11 +185,7 @@ fun saveUserProfile(
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-fun UserProfileSetupScreenPreview() {
-    UserProfileSetupScreen(onProfileComplete = {})
-}
+
 
 
 

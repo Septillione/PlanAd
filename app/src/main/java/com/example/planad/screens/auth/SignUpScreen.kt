@@ -63,7 +63,7 @@ fun SignUpScreen(
                 modifier = Modifier.width(300.dp)
             )
 
-            Spacer(modifier = Modifier.height(30.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             OutlinedTextField(
                 value = password,
@@ -73,7 +73,7 @@ fun SignUpScreen(
                 visualTransformation = PasswordVisualTransformation()
             )
 
-            Spacer(modifier = Modifier.height(100.dp))
+            Spacer(modifier = Modifier.height(50.dp))
 
             Button(
                 onClick = {

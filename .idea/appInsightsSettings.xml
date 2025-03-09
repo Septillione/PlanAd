@@ -19,9 +19,9 @@
               <option name="connection">
                 <ConnectionSetting>
                   <option name="appId" value="com.example.planad" />
-                  <option name="mobileSdkAppId" value="1:262739410406:android:d5265be38aceedf5e1ea27" />
-                  <option name="projectId" value="planad-e0775" />
-                  <option name="projectNumber" value="262739410406" />
+                  <option name="mobileSdkAppId" value="1:1067454782773:android:c89f7aaaa91054ee97c07c" />
+                  <option name="projectId" value="planad-66309" />
+                  <option name="projectNumber" value="1067454782773" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />
