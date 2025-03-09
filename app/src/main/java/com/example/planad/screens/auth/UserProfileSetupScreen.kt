@@ -34,156 +34,154 @@ import com.example.planad.graphs.AuthScreen
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
-@Composable
-fun UserProfileSetupScreen(
-    onProfileComplete: () -> Unit
-) {
-    var firstName by remember { mutableStateOf("")}
-    var lastName by remember { mutableStateOf("") }
-    var selectRole by remember { mutableStateOf("Сотрудник") }
-    var errorMessage by remember { mutableStateOf("") }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            text = "Настройка профиля",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        OutlinedTextField(
-            value = firstName,
-            onValueChange = { firstName = it },
-            label = { Text("Имя") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        OutlinedTextField(
-            value = lastName,
-            onValueChange = { lastName = it },
-            label = { Text("Фамилия") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(30.dp))
-
-        Text(
-            text = "Выберите роль",
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.align(Alignment.Start)
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            FilledTonalButton(
-                onClick = { selectRole = "Сотрудник" },
-                colors = ButtonDefaults.filledTonalButtonColors(
-                    containerColor = if (selectRole == "Сотрудник") colorResource(id = R.color.lightBlue).copy(alpha = 0.3f) else Color.LightGray
-                ),
-                shape = RoundedCornerShape(15.dp),
-                modifier = Modifier.size(150.dp, 60.dp)
-            ) {
-                Text("Сотрудник")
-            }
-            FilledTonalButton(
-                onClick = { selectRole = "Руководитель" },
-                colors = ButtonDefaults.filledTonalButtonColors(
-                    containerColor = if (selectRole == "Руководитель") colorResource(id = R.color.lightBlue).copy(alpha = 0.3f) else Color.LightGray
-                ),
-                shape = RoundedCornerShape(15.dp),
-                modifier = Modifier.size(150.dp, 60.dp)
-            ) {
-                Text("Руководитель")
-            }
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-
-        if (errorMessage.isNotEmpty()) {
-            Text(
-                text = errorMessage,
-                color = Color.Red,
-                modifier = Modifier.padding(8.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Button(
-            onClick = {
-                if (firstName.isNotEmpty() && lastName.isNotEmpty()) {
-                    saveUserProfile(
-                        firstName = firstName,
-                        lastName = lastName,
-                        role = selectRole,
-                        onSuccess = onProfileComplete,
-                        onFailure = {
-                            errorMessage = "Ошибка: ${it.message}"
-                        }
-                    )
-                } else {
-                    errorMessage = "Пожалуйста, заполните все поля"
-                }
-            },
-            colors = ButtonDefaults.buttonColors(
-                containerColor = colorResource(id = R.color.darkBlue),
-                contentColor = colorResource(id = R.color.white)
-            ),
-            shape = RoundedCornerShape(10.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .size(250.dp, 60.dp)
-        ){
-            Text(
-                text = "Сохранить",
-                fontWeight = FontWeight.Bold,
-                fontSize = 20.sp
-            )
-        }
-    }
-}
-fun saveUserProfile(
-    firstName: String,
-    lastName: String,
-    role: String,
-    onSuccess: () -> Unit,
-    onFailure: (Exception) -> Unit
-) {
-    val db = FirebaseFirestore.getInstance()
-    val user = FirebaseAuth.getInstance().currentUser
-
-    if (user != null) {
-        val userProfile = hashMapOf(
-            "firesName" to firstName,
-            "lastName" to lastName,
-            "role" to role
-        )
-
-        db.collection("users").document(user.uid)
-            .set(userProfile)
-            .addOnSuccessListener {
-                onSuccess()
-            }
-            .addOnFailureListener { e ->
-                onFailure(e)
-            }
-    } else {
-        onFailure(Exception("Пользователь не авторизован"))
-    }
-}
+//@Composable
+//fun UserProfileSetupScreen() {
+//    var firstName by remember { mutableStateOf("")}
+//    var lastName by remember { mutableStateOf("") }
+//    var selectRole by remember { mutableStateOf("Сотрудник") }
+//    var errorMessage by remember { mutableStateOf("") }
+//
+//    Column(
+//        modifier = Modifier
+//            .fillMaxSize()
+//            .padding(16.dp),
+//        horizontalAlignment = Alignment.CenterHorizontally,
+//        verticalArrangement = Arrangement.Center
+//    ) {
+//        Text(
+//            text = "Настройка профиля",
+//            fontSize = 24.sp,
+//            fontWeight = FontWeight.Bold
+//        )
+//
+//        Spacer(modifier = Modifier.height(16.dp))
+//
+//        OutlinedTextField(
+//            value = firstName,
+//            onValueChange = { firstName = it },
+//            label = { Text("Имя") },
+//            modifier = Modifier.fillMaxWidth()
+//        )
+//
+//        Spacer(modifier = Modifier.height(8.dp))
+//
+//        OutlinedTextField(
+//            value = lastName,
+//            onValueChange = { lastName = it },
+//            label = { Text("Фамилия") },
+//            modifier = Modifier.fillMaxWidth()
+//        )
+//
+//        Spacer(modifier = Modifier.height(30.dp))
+//
+//        Text(
+//            text = "Выберите роль",
+//            fontSize = 18.sp,
+//            fontWeight = FontWeight.Bold,
+//            modifier = Modifier.align(Alignment.Start)
+//        )
+//
+//        Spacer(modifier = Modifier.height(8.dp))
+//
+//        Row(
+//            modifier = Modifier.fillMaxWidth(),
+//            horizontalArrangement = Arrangement.SpaceBetween
+//        ) {
+//            FilledTonalButton(
+//                onClick = { selectRole = "Сотрудник" },
+//                colors = ButtonDefaults.filledTonalButtonColors(
+//                    containerColor = if (selectRole == "Сотрудник") colorResource(id = R.color.lightBlue).copy(alpha = 0.3f) else Color.LightGray
+//                ),
+//                shape = RoundedCornerShape(15.dp),
+//                modifier = Modifier.size(150.dp, 60.dp)
+//            ) {
+//                Text("Сотрудник")
+//            }
+//            FilledTonalButton(
+//                onClick = { selectRole = "Руководитель" },
+//                colors = ButtonDefaults.filledTonalButtonColors(
+//                    containerColor = if (selectRole == "Руководитель") colorResource(id = R.color.lightBlue).copy(alpha = 0.3f) else Color.LightGray
+//                ),
+//                shape = RoundedCornerShape(15.dp),
+//                modifier = Modifier.size(150.dp, 60.dp)
+//            ) {
+//                Text("Руководитель")
+//            }
+//        }
+//        Spacer(modifier = Modifier.height(16.dp))
+//
+//        if (errorMessage.isNotEmpty()) {
+//            Text(
+//                text = errorMessage,
+//                color = Color.Red,
+//                modifier = Modifier.padding(8.dp)
+//            )
+//        }
+//
+//        Spacer(modifier = Modifier.height(16.dp))
+//
+//        Button(
+//            onClick = {
+//                if (firstName.isNotEmpty() && lastName.isNotEmpty()) {
+//                    saveUserProfile(
+//                        firstName = firstName,
+//                        lastName = lastName,
+//                        role = selectRole,
+//                        onSuccess = ,
+//                        onFailure = {
+//                            errorMessage = "Ошибка: ${it.message}"
+//                        }
+//                    )
+//                } else {
+//                    errorMessage = "Пожалуйста, заполните все поля"
+//                }
+//            },
+//            colors = ButtonDefaults.buttonColors(
+//                containerColor = colorResource(id = R.color.darkBlue),
+//                contentColor = colorResource(id = R.color.white)
+//            ),
+//            shape = RoundedCornerShape(10.dp),
+//            modifier = Modifier
+//                .fillMaxWidth()
+//                .size(250.dp, 60.dp)
+//        ){
+//            Text(
+//                text = "Сохранить",
+//                fontWeight = FontWeight.Bold,
+//                fontSize = 20.sp
+//            )
+//        }
+//    }
+//}
+//fun saveUserProfile(
+//    firstName: String,
+//    lastName: String,
+//    role: String,
+//    onSuccess: () -> Unit,
+//    onFailure: (Exception) -> Unit
+//) {
+//    val db = FirebaseFirestore.getInstance()
+//    val user = FirebaseAuth.getInstance().currentUser
+//
+//    if (user != null) {
+//        val userProfile = hashMapOf(
+//            "firesName" to firstName,
+//            "lastName" to lastName,
+//            "role" to role
+//        )
+//
+//        db.collection("users").document(user.uid)
+//            .set(userProfile)
+//            .addOnSuccessListener {
+//                onSuccess()
+//            }
+//            .addOnFailureListener { e ->
+//                onFailure(e)
+//            }
+//    } else {
+//        onFailure(Exception("Пользователь не авторизован"))
+//    }
+//}
 
 
 

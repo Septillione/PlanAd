@@ -33,7 +33,6 @@ import com.google.firebase.auth.auth
 
 @Composable
 fun SignUpScreen(
-    onSignUp: () -> Unit,
     authViewModel: AuthViewModel,
 ) {
     val auth = Firebase.auth
@@ -77,7 +76,7 @@ fun SignUpScreen(
 
             Button(
                 onClick = {
-                    signUp(auth, email, password, onSignUp)
+                    signUp(auth, email, password)
                 },
                 shape = RoundedCornerShape(10.dp),
                 colors = ButtonDefaults.buttonColors(
@@ -96,23 +95,17 @@ fun SignUpScreen(
     }
 }
 
-private fun signUp(auth: FirebaseAuth, email: String, password: String, onSignUp: () -> Unit) {
+private fun signUp(auth: FirebaseAuth, email: String, password: String) {
     auth.createUserWithEmailAndPassword(email, password)
         .addOnCompleteListener {
             if (it.isSuccessful) {
                 Log.d("MyLog", "Успешная регистрация")
-                onSignUp()
             } else {
                 Log.d("MyLog", "Регистрация накрылась")
             }
         }
 }
 
-@Preview
-@Composable
-fun PreviewSignUp() {
-    SignUpScreen(onSignUp = {}, authViewModel = AuthViewModel())
-}
 
 
 

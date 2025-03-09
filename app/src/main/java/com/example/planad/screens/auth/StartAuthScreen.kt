@@ -27,7 +27,6 @@ import com.example.planad.R
 @Composable
 fun StartAuthScreen(
     onLoginClick: () -> Unit,
-    onSignUpClick: () -> Unit,
     onInCase: () -> Unit,
     authViewModel: AuthViewModel
 ) {
@@ -60,38 +59,7 @@ fun StartAuthScreen(
                     fontWeight = FontWeight.Bold
                 )
             }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Button(
-                onSignUpClick,
-                shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = colorResource(id = R.color.darkBlue),
-                    contentColor = colorResource(id = R.color.white)
-                ),
-                modifier = Modifier.size(width = 250.dp, height = 60.dp)
-            ) {
-                Text(
-                    text = "Зарегистрироваться",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
         }
     }
 }
-
-@Preview
-@Composable
-fun PreviewStartAuth() {
-    StartAuthScreen(
-        onLoginClick = {},
-        onSignUpClick = {},
-        onInCase = {},
-        authViewModel = AuthViewModel())
-}
-
-
-
 

@@ -40,21 +40,10 @@ import com.google.firebase.auth.auth
 @Composable
 fun LoginScreen(
     onLogin: () -> Unit,
-    onForgotClick: () -> Unit,
+    onAdminLogin: () -> Unit,
     authViewModel: AuthViewModel
 ) {
     val auth = Firebase.auth
-
-//    val authState = authViewModel.authState.observeAsState()
-//    val context = LocalContext.current
-//
-//    LaunchedEffect(authState.value) {
-//        when(authState.value) {
-//            is AuthState.Authenticated -> onLogin()
-//            is AuthState.Error -> Toast.makeText(context, (authState.value as AuthState.Error).message, Toast.LENGTH_SHORT).show()
-//            else -> Unit
-//        }
-//    }
 
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -95,7 +84,7 @@ fun LoginScreen(
 
             Button(
                 onClick = {
-                    signIn(auth, email, password, onLogin)
+                    signIn(auth, email, password, onLogin, onAdminLogin)
                     //authViewModel.login(email, password)
                 },
                 shape = RoundedCornerShape(10.dp),
@@ -115,24 +104,19 @@ fun LoginScreen(
     }
 }
 
-private fun signIn(auth: FirebaseAuth, email: String, password: String, onLogin: () -> Unit) {
+private fun signIn(auth: FirebaseAuth, email: String, password: String, onLogin: () -> Unit, onAdminLogin: () -> Unit) {
     auth.signInWithEmailAndPassword(email, password)
-        .addOnCompleteListener {
-            if (it.isSuccessful) {
+        .addOnCompleteListener { task ->
+            if (task.isSuccessful) {
                 Log.d("MyLog", "Успешный вход")
-                onLogin()
+                if (email == "admin@gmail.com") {
+                    onAdminLogin()
+                } else {
+                    onLogin()
+                }
             } else {
                 Log.d("MyLog", "Вход накрылся")
             }
         }
 }
-
-@Preview
-@Composable
-fun PreviewLogin() {
-    LoginScreen(onLogin = {}, onForgotClick = {}, authViewModel = AuthViewModel())
-}
-
-
-
 

@@ -46,9 +46,6 @@ fun HomeNavGraph(navController: NavHostController, authViewModel: AuthViewModel)
                         popUpTo(Graph.PROJECT) { inclusive = true }
                     }
                 },
-                onDeleteAccount = {
-                    navController.navigate(Graph.AUTHENTICATION)
-                },
                 authViewModel = authViewModel
             )
         }
