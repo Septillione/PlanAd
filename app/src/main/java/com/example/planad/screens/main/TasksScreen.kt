@@ -18,11 +18,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AddCircle
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -64,8 +66,8 @@ fun TasksScreen(
     onExecutorSelect: () -> Unit,
     projectId: String
 ) {
-    var tasks = remember { mutableStateOf<List<Task>>(emptyList()) }
-    var projects by remember { mutableStateOf<List<Project>>(emptyList()) }
+    var tasks by remember { mutableStateOf<List<Task>>(emptyList()) }
+    var users by remember { mutableStateOf<List<AppUser>>(emptyList()) }
     var projectName by remember { mutableStateOf("Задачи проекта") }
     var showBottomSheet by remember { mutableStateOf(false) }
     var taskName by remember { mutableStateOf("") }
@@ -74,7 +76,6 @@ fun TasksScreen(
     var errorMessage by remember { mutableStateOf("") }
     var dropdownMenu by remember { mutableStateOf(false) }
     var userRole by remember { mutableStateOf("Сотрудник") }
-    var expandedTaskId by remember { mutableStateOf<String?>(null) }
 
     var showEditProjectDialog by remember { mutableStateOf(false) }
     var showDeleteProjectDialog by remember { mutableStateOf(false) }
@@ -82,6 +83,10 @@ fun TasksScreen(
     var showEditTaskDialog by remember { mutableStateOf(false) }
     var selectedTaskForEdit by remember { mutableStateOf<Task?>(null) }
 
+    var showDeleteTaskDialog by remember { mutableStateOf(false) }
+    var taskToDelete by remember { mutableStateOf<Task?>(null) }
+
+    // Получаем список пользователей
     LaunchedEffect(Unit) {
         val userId = FirebaseAuth.getInstance().currentUser?.uid
         if (userId != null) {
@@ -97,27 +102,34 @@ fun TasksScreen(
         } else {
             errorMessage = "Пользователь не авторизован"
         }
+        getUsers(
+            onSuccess = { userList ->
+                users = userList
+            },
+            onFailure = { e ->
+                errorMessage = "Ошибка при загрузке пользователей: ${e.message}"
+            }
+        )
     }
 
-    // Получаем название проекта
+    // Получаем задачи проекта
     LaunchedEffect(projectId) {
         loading = true
         errorMessage = ""
         getProjectName(
             projectId = projectId,
             onSuccess = { name ->
-                projectName = name // Обновляем название проекта
+                projectName = name
             },
             onFailure = { e ->
                 errorMessage = "Ошибка: ${e.message}"
             }
         )
 
-        // Получаем задачи проекта
         getTasksForProject(
             projectId = projectId,
             onSuccess = {
-                tasks.value = it
+                tasks = it
                 loading = false
             },
             onFailure = { e ->
@@ -135,7 +147,8 @@ fun TasksScreen(
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     overflow = TextOverflow.Ellipsis
-                ) }, // Используем название проекта
+                )
+            },
             navigationIcon = {
                 IconButton(onClick = onBackTap) {
                     Icon(Icons.Outlined.Home, contentDescription = "Назад", modifier = Modifier.size(30.dp))
@@ -200,210 +213,595 @@ fun TasksScreen(
         }
 
         if (loading) {
-            CircularProgressIndicator()
+            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
         } else if (errorMessage.isNotEmpty()) {
-            Text(text = errorMessage, color = Color.Red)
+            Text(
+                text = errorMessage,
+                color = Color.Red,
+                modifier = Modifier.align(Alignment.Center)
+            )
         } else {
-            if (userRole == "Руководитель") {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(top = 120.dp, bottom = 180.dp)
-                ) {
-                    items(tasks.value) { task ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(8.dp)
-                                .border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
-                                .padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text(
-                                    text = task.title,
-                                    fontSize = 20.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = task.description,
-                                    fontSize = 16.sp,
-                                    modifier = Modifier.padding(top = 4.dp)
-                                )
-                            }
-                            Box {
-                                IconButton(
-                                    onClick = {
-                                        selectedTaskForEdit = task
-                                    }
-                                ) {
-                                    Icon(Icons.Outlined.MoreVert, contentDescription = "Опции")
-                                }
-                                DropdownMenu(
-                                    expanded = selectedTaskForEdit?.id == task.id,
-                                    onDismissRequest = {
-                                        selectedTaskForEdit = null
-                                        expandedTaskId = null
-                                    }
-                                ) {
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text("Редактировать")
-                                        },
-                                        onClick = {
-                                            showEditTaskDialog = true
-                                        }
-                                    )
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text("Удалить")
-                                        },
-                                        onClick = {
-                                            deleteTask(
-                                                projectId = projectId,
-                                                taskId = task.id,
-                                                onSuccess = {
-                                                    tasks.value = tasks.value.filter { it.id != task.id }
-                                                    selectedTaskForEdit = null
-                                                    expandedTaskId = null
-                                                },
-                                                onFailure = { e ->
-                                                    errorMessage = "Ошибка: ${e.message}"
-                                                }
-                                            )
-                                            expandedTaskId = null
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = 120.dp, bottom = 180.dp)
+            ) {
+                items(tasks) { task ->
 
-            } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(top = 120.dp, bottom = 120.dp)
-                ) {
-                    items(tasks.value) { task ->
+                    val assignedEmployees = users.filter { it.id in task.assignedUserIds && it.role == "Сотрудник" }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp)
+                            .border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Основная информация о задаче
                         Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(8.dp)
-                                .border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
-                                .padding(16.dp)
+                            modifier = Modifier.weight(1f)
                         ) {
+                            // Название задачи
                             Text(
                                 text = task.title,
                                 fontSize = 20.sp,
                                 fontWeight = FontWeight.Bold
                             )
+
+                            // Описание задачи
                             Text(
                                 text = task.description,
                                 fontSize = 16.sp,
                                 modifier = Modifier.padding(top = 4.dp)
                             )
+
+                            if (assignedEmployees.isNotEmpty()) {
+                                Text(
+                                    text = "Исполнители: ${assignedEmployees.joinToString { "${it.firstName} ${it.lastName}" }}",
+                                    fontSize = 14.sp,
+                                    color = Color.Gray,
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
+                            }
+                        }
+                        // Кнопки редактирования и удаления
+                        if (userRole == "Руководитель") {
+                            IconButton(
+                                onClick = {
+                                    selectedTaskForEdit = task
+                                    showEditTaskDialog = true
+                                }
+                            ) {
+                                Icon(Icons.Outlined.MoreVert, contentDescription = "Редактировать")
+                            }
+
+                            IconButton(
+                                onClick = {
+                                    taskToDelete = task
+                                    showDeleteTaskDialog = true
+                                }
+                            ) {
+                                Icon(Icons.Outlined.Delete, contentDescription = "Удалить")
+                            }
                         }
                     }
                 }
             }
-        }
 
-        if (showEditTaskDialog && selectedTaskForEdit != null) {
-            EditTaskDialog(
-                currentTask = selectedTaskForEdit!!,
-                onDismissRequest = {
-                    showEditTaskDialog = false
-                    selectedTaskForEdit = null
-                },
-                onSave = { newTitle, newDescription ->
-                    updateTask(
-                        projectId = projectId,
-                        taskId = selectedTaskForEdit!!.id,
-                        title = newTitle,
-                        description = newDescription,
-                        onSuccess = {
-                            tasks.value = tasks.value.map { task ->
-                                if (task.id == selectedTaskForEdit!!.id) {
-                                    task.copy(title = newTitle, description = newDescription)
-                                } else {
-                                    task
+            if (showEditTaskDialog && selectedTaskForEdit != null) {
+                EditTaskDialog(
+                    currentTask = selectedTaskForEdit!!,
+                    users = users,
+                    onDismissRequest = {
+                        showEditTaskDialog = false
+                        selectedTaskForEdit = null
+                    },
+                    onSave = { newTitle, newDescription, newExecutorIds ->
+                        updateTask(
+                            projectId = projectId,
+                            taskId = selectedTaskForEdit!!.id,
+                            title = newTitle,
+                            description = newDescription,
+                            assignedUserIds = newExecutorIds,
+                            onSuccess = {
+                                tasks = tasks.map { task ->
+                                    if (task.id == selectedTaskForEdit!!.id) {
+                                        task.copy(title = newTitle, description = newDescription, assignedUserIds = newExecutorIds)
+                                    } else {
+                                        task
+                                    }
                                 }
+                                showEditTaskDialog = false
+                                selectedTaskForEdit = null
+                            },
+                            onFailure = { e ->
+                                errorMessage = "Ошибка: ${e.message}"
                             }
-                            showEditTaskDialog = false
-                            selectedTaskForEdit = null
-                        },
-                        onFailure = { e ->
-                            errorMessage = "Ошибка: ${e.message}"
-                        }
-                    )
-                }
-            )
-        }
-
-        if (userRole == "Руководитель") {
-            FilledTonalButton(
-                onClick = { showBottomSheet = true },
-                contentPadding = PaddingValues(horizontal = 15.dp, vertical = 12.dp),
-                shape = RoundedCornerShape(20.dp),
-                colors = ButtonDefaults.filledTonalButtonColors(
-                    containerColor = colorResource(id = R.color.lightBlue).copy(alpha = 0.3f),
-                    contentColor = colorResource(id = R.color.blue)
-                ),
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(horizontal = 16.dp, vertical = 90.dp)
-            ) {
-                Text(
-                    text = "Добавить задачу",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Icon(
-                    imageVector = Icons.Outlined.AddCircle,
-                    contentDescription = "Add Icon",
-                    modifier = Modifier.size(36.dp)
+                        )
+                    }
                 )
             }
-        }
 
-        if (showBottomSheet) {
-            BottomSheetTask(
-                onDismissRequest = { showBottomSheet = false },
-                onTaskAdded = { name, description ->
-                    val newTask = Task(title = name, description = description)
-                    addTask(
-                        projectId = projectId,
-                        task = newTask,
-                        onSuccess = { taskId ->
-                            val taskWithId = newTask.copy(id = taskId)
-                            tasks.value += taskWithId
-                            showBottomSheet = false
-                            taskName = ""
-                            taskDescription = ""
-                        },
-                        onFailure = { e ->
-                            errorMessage = "Ошибка: ${e.message}"
-                            taskName = ""
-                            taskDescription = ""
-                            showBottomSheet = false
-                        }
+            if (showDeleteTaskDialog && taskToDelete != null) {
+                DeleteTaskDialog(
+                    task = taskToDelete!!,
+                    onDismissRequest = {
+                        showDeleteTaskDialog = false
+                        taskToDelete = null
+                    },
+                    onDeleteConfirmed = {
+                        deleteTask(
+                            projectId = projectId,
+                            taskId = taskToDelete!!.id,
+                            onSuccess = {
+                                tasks = tasks.filter { it.id != taskToDelete!!.id }
+                                showDeleteTaskDialog = false
+                                taskToDelete = null
+                            },
+                            onFailure = { e ->
+                                errorMessage = "Ошибка: ${e.message}"
+                                showDeleteTaskDialog = false
+                                taskToDelete = null
+                            }
+                        )
+                    }
+                )
+            }
+
+            if (userRole == "Руководитель") {
+                FilledTonalButton(
+                    onClick = { showBottomSheet = true },
+                    contentPadding = PaddingValues(horizontal = 15.dp, vertical = 12.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = colorResource(id = R.color.lightBlue).copy(alpha = 0.3f),
+                        contentColor = colorResource(id = R.color.blue)
+                    ),
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(horizontal = 16.dp, vertical = 90.dp)
+                ) {
+                    Text(
+                        text = "Добавить задачу",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
                     )
-                },
-                taskName = taskName,
-                onTaskNameChange = { taskName = it },
-                taskDescription = taskDescription,
-                onTaskDescription = { taskDescription = it }
-            )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Icon(
+                        imageVector = Icons.Outlined.AddCircle,
+                        contentDescription = "Add Icon",
+                        modifier = Modifier.size(36.dp)
+                    )
+                }
+            }
+
+            if (showBottomSheet) {
+                BottomSheetTask(
+                    onDismissRequest = { showBottomSheet = false },
+                    onTaskAdded = { name, description, executorIds ->
+                        val newTask = Task(
+                            title = name,
+                            description = description,
+                            assignedUserIds = executorIds
+                        )
+                        addTask(
+                            projectId = projectId,
+                            task = newTask,
+                            onSuccess = { taskId ->
+                                val taskWithId = newTask.copy(id = taskId)
+                                tasks += taskWithId
+                                showBottomSheet = false
+                                taskName = ""
+                                taskDescription = ""
+                            },
+                            onFailure = { e ->
+                                errorMessage = "Ошибка: ${e.message}"
+                                taskName = ""
+                                taskDescription = ""
+                                showBottomSheet = false
+                            }
+                        )
+                    },
+                    taskName = taskName,
+                    onTaskNameChange = { taskName = it },
+                    taskDescription = taskDescription,
+                    onTaskDescription = { taskDescription = it },
+                    users = users,
+                    onExecutorSelect = { executorIds ->
+                        // Обработка выбора исполнителей
+                    }
+                )
+            }
         }
     }
 }
 
+//@OptIn(ExperimentalMaterial3Api::class)
+//@Composable
+//fun TasksScreen(
+//    onBackTap: () -> Unit,
+//    onExecutorSelect: () -> Unit,
+//    projectId: String
+//) {
+//    var tasks = remember { mutableStateOf<List<Task>>(emptyList()) }
+//    var projects by remember { mutableStateOf<List<Project>>(emptyList()) }
+//    var projectName by remember { mutableStateOf("Задачи проекта") }
+//    var showBottomSheet by remember { mutableStateOf(false) }
+//    var taskName by remember { mutableStateOf("") }
+//    var taskDescription by remember { mutableStateOf("") }
+//    var loading by remember { mutableStateOf(true) }
+//    var errorMessage by remember { mutableStateOf("") }
+//    var dropdownMenu by remember { mutableStateOf(false) }
+//    var userRole by remember { mutableStateOf("Сотрудник") }
+//    var expandedTaskId by remember { mutableStateOf<String?>(null) }
+//    var users by remember { mutableStateOf<List<AppUser>>(emptyList()) }
+//
+//    var showEditProjectDialog by remember { mutableStateOf(false) }
+//    var showDeleteProjectDialog by remember { mutableStateOf(false) }
+//
+//    var showEditTaskDialog by remember { mutableStateOf(false) }
+//    var selectedTaskForEdit by remember { mutableStateOf<Task?>(null) }
+//
+//    LaunchedEffect(Unit) {
+//        val userId = FirebaseAuth.getInstance().currentUser?.uid
+//        if (userId != null) {
+//            getUserRole(
+//                userId = userId,
+//                onSuccess = { role ->
+//                    userRole = role
+//                },
+//                onFailure = { e ->
+//                    errorMessage = "Ошибка: ${e.message}"
+//                }
+//            )
+//        } else {
+//            errorMessage = "Пользователь не авторизован"
+//        }
+//        getUsers(
+//            onSuccess = { userList ->
+//                users = userList
+//            },
+//            onFailure = { e ->
+//                errorMessage = "Ошибка при загрузке пользователей: ${e.message}"
+//            }
+//        )
+//    }
+//
+//    // Получаем название проекта
+//    LaunchedEffect(projectId) {
+//        loading = true
+//        errorMessage = ""
+//        getProjectName(
+//            projectId = projectId,
+//            onSuccess = { name ->
+//                projectName = name // Обновляем название проекта
+//            },
+//            onFailure = { e ->
+//                errorMessage = "Ошибка: ${e.message}"
+//            }
+//        )
+//
+//        // Получаем задачи проекта
+//        getTasksForProject(
+//            projectId = projectId,
+//            onSuccess = {
+//                tasks.value = it
+//                loading = false
+//            },
+//            onFailure = { e ->
+//                errorMessage = "Ошибка: ${e.message}"
+//                loading = false
+//            }
+//        )
+//    }
+//
+//    Box(modifier = Modifier.fillMaxSize()) {
+//        CenterAlignedTopAppBar(
+//            title = {
+//                Text(
+//                    text = projectName,
+//                    fontSize = 20.sp,
+//                    fontWeight = FontWeight.Bold,
+//                    overflow = TextOverflow.Ellipsis
+//                ) }, // Используем название проекта
+//            navigationIcon = {
+//                IconButton(onClick = onBackTap) {
+//                    Icon(Icons.Outlined.Home, contentDescription = "Назад", modifier = Modifier.size(30.dp))
+//                }
+//            },
+//            actions = {
+//                if (userRole == "Руководитель") {
+//                    IconButton(
+//                        onClick = { dropdownMenu = !dropdownMenu }
+//                    ) {
+//                        Icon(Icons.Outlined.MoreVert, contentDescription = "Опции", modifier = Modifier.size(30.dp))
+//                    }
+//                    DropdownMenu(
+//                        expanded = dropdownMenu,
+//                        onDismissRequest = { dropdownMenu = false }
+//                    ) {
+//                        DropdownMenuItem(
+//                            text = { Text("Редактировать проект") },
+//                            onClick = {
+//                                showEditProjectDialog = true
+//                                dropdownMenu = false
+//                            }
+//                        )
+//                        DropdownMenuItem(
+//                            text = { Text("Удалить проект") },
+//                            onClick = {
+//                                showDeleteProjectDialog = true
+//                                dropdownMenu = false
+//                            }
+//                        )
+//                    }
+//                }
+//            }
+//        )
+//
+//        if (showEditProjectDialog) {
+//            EditProjectDialog(
+//                currentProjectName = projectName,
+//                onDismissRequest = { showEditProjectDialog = false },
+//                onSave = { newName ->
+//                    updateProjectName(
+//                        projectId = projectId,
+//                        newName = newName,
+//                        onSuccess = {
+//                            projectName = newName
+//                            showEditProjectDialog = false
+//                        },
+//                        onFailure = { e ->
+//                            errorMessage = "Ошибка: ${e.message}"
+//                        }
+//                    )
+//                }
+//            )
+//        }
+//
+//        if (showDeleteProjectDialog) {
+//            DeleteProjectDialog(
+//                projectId = projectId,
+//                onDismissRequest = { showDeleteProjectDialog = false },
+//                onBackTap = onBackTap
+//            )
+//        }
+//
+//        if (loading) {
+//            CircularProgressIndicator()
+//        } else if (errorMessage.isNotEmpty()) {
+//            Text(text = errorMessage, color = Color.Red)
+//        } else {
+//            if (userRole == "Руководитель") {
+//                LazyColumn(
+//                    modifier = Modifier
+//                        .fillMaxSize()
+//                        .padding(top = 120.dp, bottom = 180.dp)
+//                ) {
+//                    items(tasks.value) { task ->
+//                        Row(
+//                            modifier = Modifier
+//                                .fillMaxWidth()
+//                                .padding(8.dp)
+//                                .border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
+//                                .padding(16.dp),
+//                            verticalAlignment = Alignment.CenterVertically
+//                        ) {
+//                            Column(
+//                                modifier = Modifier.weight(1f)
+//                            ) {
+//                                Text(
+//                                    text = task.title,
+//                                    fontSize = 20.sp,
+//                                    fontWeight = FontWeight.Bold
+//                                )
+//                                Text(
+//                                    text = task.description,
+//                                    fontSize = 16.sp,
+//                                    modifier = Modifier.padding(top = 4.dp)
+//                                )
+//
+//                            }
+//                            Box {
+//                                IconButton(
+//                                    onClick = {
+//                                        selectedTaskForEdit = task
+//                                    }
+//                                ) {
+//                                    Icon(Icons.Outlined.MoreVert, contentDescription = "Опции")
+//                                }
+//                                DropdownMenu(
+//                                    expanded = selectedTaskForEdit?.id == task.id,
+//                                    onDismissRequest = {
+//                                        selectedTaskForEdit = null
+//                                        expandedTaskId = null
+//                                    }
+//                                ) {
+//                                    DropdownMenuItem(
+//                                        text = {
+//                                            Text("Редактировать")
+//                                        },
+//                                        onClick = {
+//                                            showEditTaskDialog = true
+//                                        }
+//                                    )
+//                                    DropdownMenuItem(
+//                                        text = {
+//                                            Text("Удалить")
+//                                        },
+//                                        onClick = {
+//                                            deleteTask(
+//                                                projectId = projectId,
+//                                                taskId = task.id,
+//                                                onSuccess = {
+//                                                    tasks.value = tasks.value.filter { it.id != task.id }
+//                                                    selectedTaskForEdit = null
+//                                                    expandedTaskId = null
+//                                                },
+//                                                onFailure = { e ->
+//                                                    errorMessage = "Ошибка: ${e.message}"
+//                                                }
+//                                            )
+//                                            expandedTaskId = null
+//                                        }
+//                                    )
+//                                }
+//                            }
+//                        }
+//                    }
+//                }
+//
+//            } else {
+//                LazyColumn(
+//                    modifier = Modifier
+//                        .fillMaxSize()
+//                        .padding(top = 120.dp, bottom = 120.dp)
+//                ) {
+//                    items(tasks.value) { task ->
+//                        Column(
+//                            modifier = Modifier
+//                                .fillMaxWidth()
+//                                .padding(8.dp)
+//                                .border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
+//                                .padding(16.dp)
+//                        ) {
+//                            Text(
+//                                text = task.title,
+//                                fontSize = 20.sp,
+//                                fontWeight = FontWeight.Bold
+//                            )
+//                            Text(
+//                                text = task.description,
+//                                fontSize = 16.sp,
+//                                modifier = Modifier.padding(top = 4.dp)
+//                            )
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//
+//        if (showEditTaskDialog && selectedTaskForEdit != null) {
+//            EditTaskDialog(
+//                currentTask = selectedTaskForEdit!!,
+//                onDismissRequest = {
+//                    showEditTaskDialog = false
+//                    selectedTaskForEdit = null
+//                },
+//                onSave = { newTitle, newDescription ->
+//                    updateTask(
+//                        projectId = projectId,
+//                        taskId = selectedTaskForEdit!!.id,
+//                        title = newTitle,
+//                        description = newDescription,
+//                        onSuccess = {
+//                            tasks.value = tasks.value.map { task ->
+//                                if (task.id == selectedTaskForEdit!!.id) {
+//                                    task.copy(title = newTitle, description = newDescription)
+//                                } else {
+//                                    task
+//                                }
+//                            }
+//                            showEditTaskDialog = false
+//                            selectedTaskForEdit = null
+//                        },
+//                        onFailure = { e ->
+//                            errorMessage = "Ошибка: ${e.message}"
+//                        }
+//                    )
+//                }
+//            )
+//        }
+//
+//        if (userRole == "Руководитель") {
+//            FilledTonalButton(
+//                onClick = { showBottomSheet = true },
+//                contentPadding = PaddingValues(horizontal = 15.dp, vertical = 12.dp),
+//                shape = RoundedCornerShape(20.dp),
+//                colors = ButtonDefaults.filledTonalButtonColors(
+//                    containerColor = colorResource(id = R.color.lightBlue).copy(alpha = 0.3f),
+//                    contentColor = colorResource(id = R.color.blue)
+//                ),
+//                modifier = Modifier
+//                    .align(Alignment.BottomStart)
+//                    .padding(horizontal = 16.dp, vertical = 90.dp)
+//            ) {
+//                Text(
+//                    text = "Добавить задачу",
+//                    fontSize = 16.sp,
+//                    fontWeight = FontWeight.Bold
+//                )
+//                Spacer(modifier = Modifier.width(8.dp))
+//                Icon(
+//                    imageVector = Icons.Outlined.AddCircle,
+//                    contentDescription = "Add Icon",
+//                    modifier = Modifier.size(36.dp)
+//                )
+//            }
+//        }
+//
+//        if (showBottomSheet) {
+//            BottomSheetTask(
+//                onDismissRequest = { showBottomSheet = false },
+//                onTaskAdded = { name, description, executorId ->
+//                    val newTask = Task(title = name, description = description, assignedUserIds = executorId)
+//                    addTask(
+//                        projectId = projectId,
+//                        task = newTask,
+//                        onSuccess = { taskId ->
+//                            val taskWithId = newTask.copy(id = taskId)
+//                            tasks.value += taskWithId
+//                            showBottomSheet = false
+//                            taskName = ""
+//                            taskDescription = ""
+//                        },
+//                        onFailure = { e ->
+//                            errorMessage = "Ошибка: ${e.message}"
+//                            taskName = ""
+//                            taskDescription = ""
+//                            showBottomSheet = false
+//                        }
+//                    )
+//                },
+//                taskName = taskName,
+//                onTaskNameChange = { taskName = it },
+//                taskDescription = taskDescription,
+//                onTaskDescription = { taskDescription = it },
+//                users = users,
+//                onExecutorSelect = { executorId ->
+//
+//                }
+//            )
+//        }
+//    }
+//}
 
+fun getUsers(
+    onSuccess: (List<AppUser>) -> Unit,
+    onFailure: (Exception) -> Unit
+) {
+    val db = FirebaseFirestore.getInstance()
+
+    db.collection("users")
+        .get()
+        .addOnSuccessListener { result ->
+            val users = mutableListOf<AppUser>()
+            for (document in result) {
+                val user = AppUser(
+                    id = document.id,
+                    firstName = document.getString("firstName") ?: "",
+                    lastName = document.getString("lastName") ?: "",
+                    role = document.getString("role") ?: "",
+                )
+                users.add(user)
+            }
+            onSuccess(users)
+        }
+        .addOnFailureListener { e ->
+            onFailure(e)
+        }
+}
 
 
 
@@ -450,16 +848,28 @@ fun updateProjectName(
         }
 }
 
+fun filterEmployees(users: List<AppUser>): List<AppUser> {
+    return users.filter { it.role == "Сотрудник" }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BottomSheetTask(
     onDismissRequest: () -> Unit,
-    onTaskAdded: (String, String) -> Unit,
+    onTaskAdded: (String, String, List<String>) -> Unit,
     taskName: String,
     onTaskNameChange: (String) -> Unit,
     taskDescription: String,
-    onTaskDescription: (String) -> Unit
+    onTaskDescription: (String) -> Unit,
+    users: List<AppUser>, // Все пользователи
+    onExecutorSelect: (List<String>) -> Unit
 ) {
+    var selectedExecutorIds by remember { mutableStateOf<List<String>>(emptyList()) }
+    var showExecutorDropdown by remember { mutableStateOf(false) }
+
+    // Фильтруем пользователей, оставляя только сотрудников
+    val employees = filterEmployees(users)
+
     ModalBottomSheet(
         onDismissRequest = onDismissRequest
     ) {
@@ -468,36 +878,54 @@ fun BottomSheetTask(
                 .padding(16.dp)
                 .fillMaxWidth()
         ) {
+            // Поля для названия и описания задачи...
+
+            // Выбор исполнителей
             Text(
-                text = "Добавить задачу",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold
+                text = "Выберите исполнителей",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 8.dp)
             )
+
+            // Список сотрудников с чекбоксами
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp) // Ограничиваем высоту списка
+            ) {
+                items(employees) { user ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                    ) {
+                        Checkbox(
+                            checked = selectedExecutorIds.contains(user.id),
+                            onCheckedChange = { isChecked ->
+                                selectedExecutorIds = if (isChecked) {
+                                    selectedExecutorIds + user.id
+                                } else {
+                                    selectedExecutorIds - user.id
+                                }
+                            }
+                        )
+                        Text(
+                            text = "${user.firstName} ${user.lastName}",
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            OutlinedTextField(
-                value = taskName,
-                onValueChange = onTaskNameChange,
-                label = {Text("Название задачи")},
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            OutlinedTextField(
-                value = taskDescription,
-                onValueChange = onTaskDescription,
-                label = {Text("Описание задачи")},
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
+            // Кнопка для создания задачи
             Button(
                 onClick = {
                     if (taskName.isNotEmpty()) {
-                        onTaskAdded(taskName, taskDescription)
+                        onTaskAdded(taskName, taskDescription, selectedExecutorIds)
                     }
                 },
                 shape = RoundedCornerShape(10.dp),
@@ -507,8 +935,7 @@ fun BottomSheetTask(
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .size(250.dp, 50.dp)
-                    .align(Alignment.CenterHorizontally)
+                    .height(50.dp)
             ) {
                 Text(
                     text = "Создать задачу",
@@ -522,6 +949,7 @@ fun BottomSheetTask(
     }
 }
 
+
 fun addTask(
     projectId: String,
     task: Task,
@@ -529,6 +957,12 @@ fun addTask(
     onFailure: (Exception) -> Unit
 ) {
     val db = FirebaseFirestore.getInstance()
+
+    val taskData = hashMapOf(
+        "title" to task.title,
+        "description" to task.description,
+        "assignedUserId" to task.assignedUserIds
+    )
 
     db.collection("projects").document(projectId).collection("tasks")
         .add(task)
@@ -564,6 +998,7 @@ fun updateTask(
     taskId: String,
     title: String,
     description: String,
+    assignedUserIds: List<String>, // Новый параметр
     onSuccess: () -> Unit,
     onFailure: (Exception) -> Unit
 ) {
@@ -573,7 +1008,8 @@ fun updateTask(
         .update(
             mapOf(
                 "title" to title,
-                "description" to description
+                "description" to description,
+                "assignedUserIds" to assignedUserIds // Обновляем список ID
             )
         )
         .addOnSuccessListener {
@@ -596,11 +1032,16 @@ fun getTasksForProject(
         .addOnSuccessListener { result ->
             val tasks = mutableListOf<Task>()
             for (document in result) {
-                val task = document.toObject(Task::class.java).copy(id = document.id)
+                val task = Task(
+                    id = document.id,
+                    title = document.getString("title") ?: "",
+                    description = document.getString("description") ?: "",
+                    assignedUserIds = document.get("assignedUserIds") as? List<String> ?: emptyList() // Парсим список ID
+                )
                 tasks.add(task)
-                }
-            onSuccess(tasks)
             }
+            onSuccess(tasks)
+        }
         .addOnFailureListener { e ->
             onFailure(e)
         }
@@ -609,11 +1050,16 @@ fun getTasksForProject(
 @Composable
 fun EditTaskDialog(
     currentTask: Task,
+    users: List<AppUser>, // Все пользователи
     onDismissRequest: () -> Unit,
-    onSave: (String, String) -> Unit
+    onSave: (String, String, List<String>) -> Unit
 ) {
     var newTaskName by remember { mutableStateOf(currentTask.title) }
     var newTaskDescription by remember { mutableStateOf(currentTask.description) }
+    var selectedExecutorIds by remember { mutableStateOf(currentTask.assignedUserIds) }
+
+    // Фильтруем пользователей, оставляя только сотрудников
+    val employees = filterEmployees(users)
 
     Dialog(
         onDismissRequest = onDismissRequest
@@ -635,7 +1081,7 @@ fun EditTaskDialog(
                 OutlinedTextField(
                     value = newTaskName,
                     onValueChange = { newTaskName = it },
-                    label = { Text(text = "Название задачи") },
+                    label = { Text("Название задачи") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(8.dp)
                 )
@@ -652,6 +1098,46 @@ fun EditTaskDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // Выбор исполнителей
+                Text(
+                    text = "Исполнители",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(150.dp)
+                ) {
+                    items(employees) { user ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                        ) {
+                            Checkbox(
+                                checked = selectedExecutorIds.contains(user.id),
+                                onCheckedChange = { isChecked ->
+                                    selectedExecutorIds = if (isChecked) {
+                                        selectedExecutorIds + user.id
+                                    } else {
+                                        selectedExecutorIds - user.id
+                                    }
+                                }
+                            )
+                            Text(
+                                text = "${user.firstName} ${user.lastName}",
+                                modifier = Modifier.padding(start = 8.dp)
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
@@ -665,7 +1151,9 @@ fun EditTaskDialog(
                     Spacer(modifier = Modifier.width(8.dp))
 
                     TextButton(
-                        onClick = { onSave(newTaskName, newTaskDescription) },
+                        onClick = {
+                            onSave(newTaskName, newTaskDescription, selectedExecutorIds)
+                        },
                         enabled = newTaskName.isNotEmpty()
                     ) {
                         Text("Сохранить")
@@ -812,9 +1300,76 @@ fun DeleteProjectDialog(
     }
 }
 
+@Composable
+fun DeleteTaskDialog(
+    task: Task, // Задача, которую нужно удалить
+    onDismissRequest: () -> Unit, // Закрытие диалога
+    onDeleteConfirmed: () -> Unit // Подтверждение удаления
+) {
+    Dialog(
+        onDismissRequest = onDismissRequest
+    ) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surface
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .width(280.dp)
+            ) {
+                // Заголовок диалога
+                Text(
+                    text = "Удалить задачу?",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+
+                // Описание задачи
+                Text(
+                    text = "Вы уверены, что хотите удалить задачу \"${task.title}\"?",
+                    fontSize = 16.sp,
+                    modifier = Modifier.padding(bottom = 24.dp)
+                )
+
+                // Кнопки "Отмена" и "Удалить"
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(
+                        onClick = onDismissRequest
+                    ) {
+                        Text("Отмена")
+                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    TextButton(
+                        onClick = onDeleteConfirmed
+                    ) {
+                        Text(
+                            text = "Удалить",
+                            color = Color.Red
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
 data class Task(
     var id: String = "",
     val title: String = "",
     val description: String = "",
-    var assignedUserId: String? = null
+    var assignedUserIds: List<String> = emptyList()
+)
+
+data class AppUser(
+    val id: String = "",
+    val firstName: String = "",
+    val lastName: String = "",
+    val role: String = ""
 )

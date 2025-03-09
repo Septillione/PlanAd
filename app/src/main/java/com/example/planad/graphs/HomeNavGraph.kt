@@ -35,7 +35,9 @@ fun HomeNavGraph(navController: NavHostController, authViewModel: AuthViewModel)
             )
         }
         composable(route = BottomBarScreen.UserTasks.route) {
-            UserTasksScreen()
+            UserTasksScreen(
+                onBackTap = { navController.navigate(Graph.PROJECT) }
+            )
         }
         composable(route = BottomBarScreen.Settings.route) {
             SettingsScreen(
