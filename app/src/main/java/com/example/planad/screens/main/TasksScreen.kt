@@ -16,7 +16,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.outlined.AddCircle
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Home
@@ -49,10 +51,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.wear.compose.material3.OutlinedButton
 import com.example.planad.R
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -256,6 +260,18 @@ fun TasksScreen(
                                 modifier = Modifier.padding(top = 4.dp)
                             )
 
+                            Text(
+                                text = "Статус: ${task.status}",
+                                fontSize = 14.sp,
+                                color = when (task.status) {
+                                    "Выполняется" -> Color.Blue
+                                    "Завершена" -> Color.Green
+                                    "Отменена" -> Color.Red
+                                    else -> Color.Gray
+                                },
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
+
                             if (assignedEmployees.isNotEmpty()) {
                                 Text(
                                     text = "Исполнители: ${assignedEmployees.joinToString { "${it.firstName} ${it.lastName}" }}",
@@ -297,17 +313,23 @@ fun TasksScreen(
                         showEditTaskDialog = false
                         selectedTaskForEdit = null
                     },
-                    onSave = { newTitle, newDescription, newExecutorIds ->
+                    onSave = { newTitle, newDescription, newStatus, newExecutorIds ->
                         updateTask(
                             projectId = projectId,
                             taskId = selectedTaskForEdit!!.id,
                             title = newTitle,
                             description = newDescription,
+                            status = newStatus,
                             assignedUserIds = newExecutorIds,
                             onSuccess = {
                                 tasks = tasks.map { task ->
                                     if (task.id == selectedTaskForEdit!!.id) {
-                                        task.copy(title = newTitle, description = newDescription, assignedUserIds = newExecutorIds)
+                                        task.copy(
+                                            title = newTitle,
+                                            description = newDescription,
+                                            status = newStatus,
+                                            assignedUserIds = newExecutorIds
+                                        )
                                     } else {
                                         task
                                     }
@@ -442,11 +464,6 @@ fun getUsers(
             onFailure(e)
         }
 }
-
-
-
-
-
 
 fun getProjectName(
     projectId: String,
@@ -625,6 +642,7 @@ fun addTask(
     val taskData = hashMapOf(
         "title" to task.title,
         "description" to task.description,
+        "status" to task.status,
         "assignedUserId" to task.assignedUserIds
     )
 
@@ -662,7 +680,8 @@ fun updateTask(
     taskId: String,
     title: String,
     description: String,
-    assignedUserIds: List<String>, // Новый параметр
+    status: String,
+    assignedUserIds: List<String>,
     onSuccess: () -> Unit,
     onFailure: (Exception) -> Unit
 ) {
@@ -673,7 +692,8 @@ fun updateTask(
             mapOf(
                 "title" to title,
                 "description" to description,
-                "assignedUserIds" to assignedUserIds // Обновляем список ID
+                "status" to status,
+                "assignedUserIds" to assignedUserIds,
             )
         )
         .addOnSuccessListener {
@@ -700,7 +720,8 @@ fun getTasksForProject(
                     id = document.id,
                     title = document.getString("title") ?: "",
                     description = document.getString("description") ?: "",
-                    assignedUserIds = document.get("assignedUserIds") as? List<String> ?: emptyList() // Парсим список ID
+                    status = document.getString("status") ?: "Выполняется",
+                    assignedUserIds = document.get("assignedUserIds") as? List<String> ?: emptyList()
                 )
                 tasks.add(task)
             }
@@ -716,14 +737,17 @@ fun EditTaskDialog(
     currentTask: Task,
     users: List<AppUser>, // Все пользователи
     onDismissRequest: () -> Unit,
-    onSave: (String, String, List<String>) -> Unit
+    onSave: (String, String, String, List<String>) -> Unit
 ) {
     var newTaskName by remember { mutableStateOf(currentTask.title) }
     var newTaskDescription by remember { mutableStateOf(currentTask.description) }
+    var selectedStatus by remember { mutableStateOf(currentTask.status) }
     var selectedExecutorIds by remember { mutableStateOf(currentTask.assignedUserIds) }
+    var showStatusDropdown by remember { mutableStateOf(false) }
 
     // Фильтруем пользователей, оставляя только сотрудников
     val employees = filterEmployees(users)
+    val statusOptions = listOf("Выполняется", "Завершена", "Отменена")
 
     Dialog(
         onDismissRequest = onDismissRequest
@@ -759,6 +783,33 @@ fun EditTaskDialog(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(8.dp)
                 )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedButton(
+                    onClick = { showStatusDropdown = true },
+                ) {
+                    Text(selectedStatus)
+                    Icon(
+                        imageVector = Icons.Default.ArrowDropDown,
+                        contentDescription = "Выбрать статус"
+                    )
+                }
+
+                DropdownMenu(
+                    expanded = showStatusDropdown,
+                    onDismissRequest = { showStatusDropdown = false }
+                ) {
+                    statusOptions.forEach { status ->
+                        DropdownMenuItem(
+                            text = { Text(status) },
+                            onClick = {
+                                selectedStatus = status
+                                showStatusDropdown = false
+                            }
+                        )
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -816,7 +867,7 @@ fun EditTaskDialog(
 
                     TextButton(
                         onClick = {
-                            onSave(newTaskName, newTaskDescription, selectedExecutorIds)
+                            onSave(newTaskName, newTaskDescription, selectedStatus, selectedExecutorIds)
                         },
                         enabled = newTaskName.isNotEmpty()
                     ) {
@@ -1028,6 +1079,7 @@ data class Task(
     var id: String = "",
     val title: String = "",
     val description: String = "",
+    var status: String = "Выполняется",
     var assignedUserIds: List<String> = emptyList()
 )
 

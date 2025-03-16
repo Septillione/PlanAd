@@ -131,6 +131,18 @@ fun UserTasksScreen(
                                     modifier = Modifier.padding(top = 4.dp)
                                 )
 
+                                Text(
+                                    text = "Статус: ${task.status}",
+                                    fontSize = 14.sp,
+                                    color = when (task.status) {
+                                        "Выполняется" -> Color.Blue
+                                        "Завершена" -> Color.Green
+                                        "Отменена" -> Color.Red
+                                        else -> Color.Gray
+                                    },
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
+
                                 if (assignedEmployees.isNotEmpty()) {
                                     Text(
                                         text = "Исполнители: ${assignedEmployees.joinToString { "${it.firstName} ${it.lastName}" }}",
@@ -170,6 +182,7 @@ fun getAllTasks(
                                 id = task.id,
                                 title = task.getString("title") ?: "",
                                 description = task.getString("description") ?: "",
+                                status = task.getString("status") ?: "Выполняется",
                                 assignedUserIds = task.get("assignedUserIds") as? List<String> ?: emptyList()
                             )
                             allTasks.add(taskData)

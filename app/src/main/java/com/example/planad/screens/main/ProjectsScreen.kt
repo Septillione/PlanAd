@@ -364,11 +364,6 @@ fun getProjects(
     db.collection("projects")
         .get()
         .addOnSuccessListener { documents ->
-//            val projects = mutableListOf<Project>()
-//            for (document in documents) {
-//                val project = document.toObject(Project::class.java).copy(id = document.id)
-//                projects.add(project)
-//            }
             val projectList = documents.map { document ->
                 Project(
                     id = document.id,
