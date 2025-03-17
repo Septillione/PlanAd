@@ -13,7 +13,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.planad.BottomBarDisplay
-import com.example.planad.screens.auth.AuthState
 import com.example.planad.screens.auth.AuthViewModel
 import com.example.planad.screens.main.ProjectsScreen
 import com.google.firebase.Firebase
@@ -22,11 +21,15 @@ import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.auth
 
 @Composable
-fun RootNavigationGraph(navController: NavHostController, modifier: Modifier, authViewModel: AuthViewModel) {
+fun RootNavigationGraph(
+    navController: NavHostController,
+    modifier: Modifier,
+    authViewModel: AuthViewModel
+) {
 
     val auth: FirebaseAuth = FirebaseAuth.getInstance()
 
-    val startDestination = if(auth.currentUser == null) {
+    var startDestination = if(auth.currentUser == null) {
         Graph.AUTHENTICATION
     } else {
         Graph.PROJECT

@@ -42,6 +42,7 @@ fun HomeNavGraph(navController: NavHostController, authViewModel: AuthViewModel)
         composable(route = BottomBarScreen.Settings.route) {
             SettingsScreen(
                 onSignOut = {
+                    Log.d("MyLog", "Колбэк onSignOut вызван")
                     navController.navigate(Graph.AUTHENTICATION) {
                         popUpTo(Graph.PROJECT) { inclusive = true }
                     }

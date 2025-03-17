@@ -27,12 +27,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.planad.R
-import com.example.planad.screens.auth.AuthState
 import com.example.planad.screens.auth.AuthViewModel
 import com.google.firebase.Firebase
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
+import com.google.firebase.crashlytics.buildtools.reloc.org.apache.http.auth.AuthState
 import com.google.firebase.firestore.FirebaseFirestore
 
 @Composable

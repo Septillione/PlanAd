@@ -31,11 +31,14 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModel
 import androidx.wear.compose.material3.TextButton
 import com.example.planad.R
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 
 @Composable
 fun LoginScreen(
@@ -119,4 +122,8 @@ private fun signIn(auth: FirebaseAuth, email: String, password: String, onLogin:
             }
         }
 }
+
+
+
+
 
