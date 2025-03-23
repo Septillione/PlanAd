@@ -35,6 +35,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.wear.compose.material3.TextButton
 import com.example.planad.R
+import com.example.planad.screens.auth.AuthUtils.isEmailValid
+import com.example.planad.screens.auth.AuthUtils.isPasswordValid
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
@@ -52,6 +54,8 @@ fun LoginScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var loginError by remember { mutableStateOf<LoginError?>(null) }
+    var isEmailValid by remember { mutableStateOf(true) }
+    var isPasswordValid by remember { mutableStateOf(true) }
 
     Box(
         modifier = Modifier.fillMaxSize(),
@@ -70,25 +74,41 @@ fun LoginScreen(
 
             OutlinedTextField(
                 value = email,
-                onValueChange = { email = it },
+                onValueChange = {
+                    email = it
+                    isEmailValid = isEmailValid(it)
+                                },
                 label = { Text("Email") },
-                modifier = Modifier.width(300.dp)
+                modifier = Modifier.width(300.dp),
+                isError = !isEmailValid
             )
+
+            if (!isEmailValid) {
+                Text(
+                    text = "Некорректный email",
+                    color = Color.Red,
+                    fontSize = 14.sp,
+                    modifier = Modifier.padding(horizontal = 20.dp)
+                )
+            }
 
             Spacer(modifier = Modifier.height(20.dp))
 
             OutlinedTextField(
                 value = password,
-                onValueChange = { password = it },
+                onValueChange = {
+                    password = it
+                    isPasswordValid = isPasswordValid(it)
+                                },
                 label = { Text("Пароль") },
                 modifier = Modifier.width(300.dp),
+                isError = !isPasswordValid,
                 visualTransformation = PasswordVisualTransformation()
             )
 
-            if (loginError != null) {
-                Spacer(modifier = Modifier.height(20.dp))
+            if (!isPasswordValid) {
                 Text(
-                    text = loginError!!.message,
+                    text = "Некорректный пароль",
                     color = Color.Red,
                     fontSize = 14.sp,
                     modifier = Modifier.padding(horizontal = 20.dp)
@@ -100,10 +120,13 @@ fun LoginScreen(
             Button(
                 onClick = {
                     loginError = null
-                    signIn(auth, email, password, onLogin, onAdminLogin) { error ->
-                        loginError = error
+                    if (isEmailValid) {
+                        signIn(auth, email, password, onLogin, onAdminLogin) { error ->
+                            loginError = error
+                        }
+                    } else {
+                        loginError = LoginError.INVALID_EMAIL
                     }
-                    //authViewModel.login(email, password)
                 },
                 shape = RoundedCornerShape(10.dp),
                 colors = ButtonDefaults.buttonColors(
@@ -148,6 +171,19 @@ private fun signIn(
         }
 }
 
+object AuthUtils {
+    fun isEmailValid(email:String): Boolean {
+        val emailRegex = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\$")
+        return emailRegex.matches(email)
+    }
+
+    fun isPasswordValid(password: String): Boolean {
+        return password.length >= 6
+    }
+}
+
+
+
 private fun getLoginError(error: String?): LoginError {
     return when {
         error == null -> LoginError.UNKNOWN_ERROR
@@ -161,7 +197,7 @@ private fun getLoginError(error: String?): LoginError {
 }
 
 enum class LoginError(val message: String) {
-    INVALID_EMAIL("Ошибка входа"),
+    INVALID_EMAIL("Некорректный email"),
     INVALID_PASSWORD("Ошибка входа"),
     USER_NOT_FOUND("Ошибка входа"),
     NETWORK_ERROR("Ошибка сети. Проверьте подключение к интернету"),
