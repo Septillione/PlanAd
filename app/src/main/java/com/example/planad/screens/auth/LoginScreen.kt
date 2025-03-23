@@ -24,6 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontWeight
@@ -50,6 +51,7 @@ fun LoginScreen(
 
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var loginError by remember { mutableStateOf<LoginError?>(null) }
 
     Box(
         modifier = Modifier.fillMaxSize(),
@@ -83,11 +85,24 @@ fun LoginScreen(
                 visualTransformation = PasswordVisualTransformation()
             )
 
+            if (loginError != null) {
+                Spacer(modifier = Modifier.height(20.dp))
+                Text(
+                    text = loginError!!.message,
+                    color = Color.Red,
+                    fontSize = 14.sp,
+                    modifier = Modifier.padding(horizontal = 20.dp)
+                )
+            }
+
             Spacer(modifier = Modifier.height(50.dp))
 
             Button(
                 onClick = {
-                    signIn(auth, email, password, onLogin, onAdminLogin)
+                    loginError = null
+                    signIn(auth, email, password, onLogin, onAdminLogin) { error ->
+                        loginError = error
+                    }
                     //authViewModel.login(email, password)
                 },
                 shape = RoundedCornerShape(10.dp),
@@ -107,7 +122,14 @@ fun LoginScreen(
     }
 }
 
-private fun signIn(auth: FirebaseAuth, email: String, password: String, onLogin: () -> Unit, onAdminLogin: () -> Unit) {
+private fun signIn(
+    auth: FirebaseAuth,
+    email: String,
+    password: String,
+    onLogin: () -> Unit,
+    onAdminLogin: () -> Unit,
+    onError: (LoginError) -> Unit
+) {
     auth.signInWithEmailAndPassword(email, password)
         .addOnCompleteListener { task ->
             if (task.isSuccessful) {
@@ -118,12 +140,32 @@ private fun signIn(auth: FirebaseAuth, email: String, password: String, onLogin:
                     onLogin()
                 }
             } else {
-                Log.d("MyLog", "Вход накрылся")
+                val error = task.exception?.message ?: "Ошибка входа"
+                val loginError = getLoginError(error)
+                Log.d("MyLog", "Ошибка входа: $error")
+                onError(loginError)
             }
         }
 }
 
+private fun getLoginError(error: String?): LoginError {
+    return when {
+        error == null -> LoginError.UNKNOWN_ERROR
+        error.contains("The supplied auth credential is incorrect, malformed or has expired.") -> LoginError.INVALID_EMAIL
+        error.contains("The password is invalid or the user does not have a password") -> LoginError.INVALID_PASSWORD
+        error.contains("There is no user record corresponding to this identifier") -> LoginError.USER_NOT_FOUND
+        error.contains("A network error has occurred") -> LoginError.NETWORK_ERROR
+        error.contains("Too many unsuccessful login attempts") -> LoginError.TOO_MANY_ATTEMPTS
+        else -> LoginError.UNKNOWN_ERROR
+    }
+}
 
-
-
+enum class LoginError(val message: String) {
+    INVALID_EMAIL("Ошибка входа"),
+    INVALID_PASSWORD("Ошибка входа"),
+    USER_NOT_FOUND("Ошибка входа"),
+    NETWORK_ERROR("Ошибка сети. Проверьте подключение к интернету"),
+    TOO_MANY_ATTEMPTS("Слишком много попыток входа. Попробуйте позже"),
+    UNKNOWN_ERROR("Неизвестная ошибка")
+}
 

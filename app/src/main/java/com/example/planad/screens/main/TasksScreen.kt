@@ -1,6 +1,7 @@
 package com.example.planad.screens.main
 
 import androidx.compose.foundation.border
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -48,6 +49,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontWeight
@@ -238,7 +240,11 @@ fun TasksScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(8.dp)
-                            .border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
+                            .border(
+                                4.dp,
+                                color = colorResource(id = R.color.lightBlue).copy(alpha = 0.3f),
+                                RoundedCornerShape(8.dp)
+                            )
                             .padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
